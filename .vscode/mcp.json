@@ -1,0 +1,25 @@
+{
+    "servers": {
+        // "context7": {
+        //     "type": "stdio",
+        //     "command": "bunx",
+        //     "args": [
+        //         "-y",
+        //         "@upstash/context7-mcp"
+        //     ]
+        // },
+        "context7": {
+            "type": "http",
+            "url": "https://mcp.context7.com/mcp"
+        },
+        // "my-mcp-server-b16bd947": {
+        //     "type": "http",
+        //     "url": "http://localhost:8000/mcp/"
+        // },
+        "makemcp-server": {
+            "type": "stdio",
+            "command": "/Users/brb/go/bin/makemcp",
+            "args": []
+        },
+    }
+}
