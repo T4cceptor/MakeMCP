@@ -18,7 +18,7 @@ func main() {
 				Usage: "Use OpenAPI specifications to launch an MCP server locally.",
 				Flags: []cli.Flag{
 					&cli.StringFlag{
-						Name:    "source",
+						Name:    "specs",
 						Aliases: []string{"s"},
 						Value:   "",
 						Usage:   "Where to find the OpenAPI specification - can be either a properly formed URL, including protocol, or a file path to a JSON file.",
@@ -27,14 +27,34 @@ func main() {
 						Name:    "base-url",
 						Aliases: []string{"b"},
 						Value:   "",
-						Usage:   "Which URL to call when invoking the different tools",
+						Usage:   "Base URL of the OpenAPI specified API. This will be called when invoking the tools.",
+					},
+					&cli.StringFlag{
+						Name:    "transport",
+						Aliases: []string{"t"},
+						Value:   string(TransportTypeStdio),
+						Usage:   "Used transport protocol for this MCP server - can be either stdio or http.",
+					},
+					&cli.BoolFlag{
+						Name:    "config-only",
+						Aliases: []string{"oc"},
+						Value:   false,
+						Usage:   "If set to true only creates a config file and exits, no server will be started.",
+					},
+					&cli.StringFlag{
+						Name:  "port",
+						Value: "8080",
+						Usage: "Defines the port on which the HTTP server is started, ignored if transport is set to stdio.",
 					},
 				},
 				Action: func(context context.Context, cmd *cli.Command) error {
 					log.Println("Creating config from flags and args (openapi subcommand)")
-					source := cmd.String("source")
+					source := cmd.String("specs")
 					baseURL := cmd.String("base-url")
-					McpFromOpenAPISpec(source, baseURL)
+					transport := TransportType(cmd.String("transport"))
+					configOnly := cmd.Bool("config-only")
+					port := cmd.String("port")
+					HandleOpenAPI(source, baseURL, transport, configOnly)
 					return nil
 				},
 			},
