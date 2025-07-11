@@ -54,114 +54,313 @@ func detectSourceType(openAPISpecLocation string) string {
 	return "file"
 }
 
-// Creates a slice of MCPToolConfig from OpenAPI 3 specification
-// Uses a provided apiClient to create a handler function for the tool
-func GetToolConfigsFromOpenAPI(openapiSpec *openapi3.T, apiClient *APIClient) []MCPToolConfig {
-	var toolConfigs []MCPToolConfig
-	for path, pathItem := range openapiSpec.Paths.Map() {
-		for method, operation := range pathItem.Operations() {
-			toolName := operation.OperationID
-			if toolName == "" {
-				toolName = fmt.Sprintf("%s_%s", method, path)
-			}
-			description := operation.Summary
-			if operation.Description != "" {
-				desc := strings.ReplaceAll(operation.Description, "\n", "\n\n")
-				description = fmt.Sprintf("%v\n\n\n%v", description, desc)
-			}
-			log.Println("Tool description:", description)
+// TODO: we need to abstract this better
+func GetToolName(method string, path string, operation *openapi3.Operation) string {
+	toolName := operation.OperationID
+	if toolName == "" {
+		toolName = fmt.Sprintf("%s_%s", method, path)
+	}
+	return toolName
+}
 
-			// Use helper methods for argument extraction and convert to ToolOptions
-			options := []mcp.ToolOption{
-				mcp.ToolOption(
-					mcp.WithDescription(description),
-				),
+// TODO: this needs to be improved based on provided data in the operation
+func GetToolDescription(method string, path string, operation *openapi3.Operation) string {
+	description := operation.Summary
+	if operation.Description != "" {
+		desc := strings.ReplaceAll(operation.Description, "\n", "\n\n")
+		description = fmt.Sprintf("%v\n%v", description, desc)
+	}
+	// TODO: we need to improve the tool description by quite a bit, as the AI is not aware how the different parameters are supposed to be provided.
+
+	description = fmt.Sprintf("%v\n Parameters are to be provided in the following schema: {'parameter_name': <name of the parameter, e.g. user_id>, 'parameter_value': <value of the parameter, e.g. 2>, 'location': <where the parameter is to be included, can be one of: path, query, header, cookie, body - will determine in which part of the request the param is placed>}", description)
+	log.Println("Tool description: \n", description)
+
+	// TODO: we need to add all sorts of parameters here, as they are supposed to be provided!
+
+	/*
+			Stops a current multipart upload and removes any parts of an incomplete upload, which would otherwise incur storage costs.
+
+		Path Parameters:
+
+		Bucket (Required): The destination bucket for the upload.
+
+		Key (Required): Key of the object for which the multipart upload was initiated.
+
+		Query Parameters:
+
+		uploadId (Required): Upload ID that identifies the multipart upload.
+		Responses:
+
+		204 (Success): Success
+		Content-Type: text/xml
+
+		Response Properties:
+
+		Example:
+
+		404: NoSuchUpload
+		Content-Type: text/xml
+	*/
+	return description
+}
+
+// getSchemaTypeString returns the first OpenAPI type if present, otherwise defaults to "string".
+func getSchemaTypeString(schema *openapi3.Schema) string {
+	if schema != nil && schema.Type != nil && len(*schema.Type) > 0 {
+		return (*schema.Type)[0]
+	}
+	return "string"
+}
+
+// extractParametersByIn extracts parameters of a given 'in' type (e.g., "path", "query", "header", "cookie")
+// from an OpenAPI operation and returns properties and required fields.
+func extractParametersByIn(operation *openapi3.Operation, in string) (map[string]ToolInputProperty, []string) {
+	properties := make(map[string]ToolInputProperty)
+	var required []string
+	for _, paramRef := range operation.Parameters {
+		if paramRef.Value == nil {
+			continue
+		}
+		param := paramRef.Value
+		if param.In == in {
+			typeName := getSchemaTypeString(param.Schema.Value)
+			properties[param.Name] = ToolInputProperty{
+				Type:        typeName,
+				Description: param.Description,
+				Location:    in, // Add the location field to record OpenAPI "in" value
 			}
-			options = append(options, extractParameters(operation)...)
-			options = append(options, extractRequestBodyArguments(operation)...)
-			handler := makeOpenAPIToolHandlerWithClient(
-				method,
-				path,
-				operation,
-				apiClient,
-			)
-			toolConfigs = append(toolConfigs, MCPToolConfig{
-				Name:        toolName,
-				Description: description,
-				Options:     options,
-				Handler:     handler,
-			})
+			if param.Required {
+				required = append(required, param.Name)
+			}
 		}
 	}
-	return toolConfigs
+	return properties, required
 }
 
-// TODO:
-// func GetMakeMCPNamespace(openapiSpec *openapi3.T) MakeMCPNamespace {
-// 	return nil
-// }
+// extractRequestBodyProperties extracts properties and required fields from the request body schema (if present).
+// Only supports application/json bodies with object schemas for now.
+func extractRequestBodyProperties(operation *openapi3.Operation) (map[string]ToolInputProperty, []string) {
+	properties := make(map[string]ToolInputProperty)
+	var required []string
 
-func GetMCPServerFromToolConfigs(
-	servername string, version string, toolConfigs []MCPToolConfig,
-) *server.MCPServer {
-	mcp_server := server.NewMCPServer(
-		servername,
-		version,
-		server.WithToolCapabilities(true),
-	)
-	for _, cfg := range toolConfigs {
-		tool := mcp.NewTool(
-			cfg.Name,
-			cfg.Options...,
-		)
-		mcp_server.AddTool(tool, cfg.Handler)
-		log.Printf("Registered TOOL: %s", tool.Name)
+	if operation.RequestBody == nil || operation.RequestBody.Value == nil {
+		return properties, required
 	}
-	return mcp_server
+
+	for contentType, media := range operation.RequestBody.Value.Content {
+		if contentType != "application/json" || media.Schema == nil || media.Schema.Value == nil {
+			continue
+		}
+		schema := media.Schema.Value
+		for propName, propSchemaRef := range schema.Properties {
+			propSchema := propSchemaRef.Value
+			if propSchema == nil {
+				continue
+			}
+			properties[propName] = ToolInputProperty{
+				Type:        getSchemaTypeString(propSchema),
+				Description: propSchema.Description,
+				Location:    "body",
+			}
+		}
+		// Add required fields from the schema
+		if schema.Required != nil {
+			required = append(required, schema.Required...)
+		}
+	}
+	return properties, required
 }
 
-// Creates a new MCP server using the provided MakeConfig
-// Accepts baseURL as a parameter and initializes an HTTP client for API calls
-func HandleOpenAPI(
-	sourceURI string,
-	baseURL string,
-	transport TransportType,
-	configOnly bool,
-	port string,
-) {
-	var openapiSpec *openapi3.T = loadOpenAPISpec(sourceURI)
-	log.Printf("\nOpenAPI doc loaded: %#v\n\n", openapiSpec.Info.Title)
+func GetToolInputSchema(method string, path string, operation *openapi3.Operation) mcp.ToolInputSchema {
+	/* NOTE: LEAVE THIS AS-IS, it serves documentation for now and will be removed later once implementation is finished
+	To implement GetToolInputSchema, you need to extract all the fields from the OpenAPI operation that define what input the tool expects. The following fields from the OpenAPI operation impact the input schema for the MCP tool:
 
-	// var makemcpNamespace MakeMCPNamespace = GetMakeMCPNamespace(openapiSpec)
-	// TODO: store makemcpNamespace as file (JSON ? or yaml)
+	Fields Impacting the Input Schema
+	- Path Parameters
+		Defined in the parameters array with "in": "path".
+		Example: /users/{id} → parameter id.
+	- Query Parameters
+		Defined in the parameters array with "in": "query".
+		Example: /users?active=true → parameter active.
+	- Header Parameters
+		Defined in the parameters array with "in": "header".
+		Example: X-Request-ID header.
+	- Cookie Parameters
+		Defined in the parameters array with "in": "cookie".
+	- Request Body
+		Defined in the requestBody field.
+		Most commonly, this is a JSON object with a schema describing its properties.
+
+	- Required Flags
+		Both parameters and request body properties can be marked as required.
+
+	Summary Table
+		Source	OpenAPI Field	Example/Notes
+		Path params	parameters (in=path)	/users/{id}
+		Query params	parameters (in=query)	/users?active=true
+		Header params	parameters (in=header)	X-Request-ID
+		Cookie params	parameters (in=cookie)	session_id
+		Request body	requestBody	JSON, form, etc.
+		Required flags	required	Both in parameters and body
+
+	Would you like a code template for extracting these into an MCP input schema?
+	*/
+	// Build the properties and required fields for the input schema
+	properties := make(map[string]ToolInputProperty)
+	var required []string
+
+	// Extract path, query, header, and cookie parameters
+	for _, in := range []string{"path", "query", "header", "cookie"} {
+		props, reqs := extractParametersByIn(operation, in)
+		for k, v := range props {
+			properties[k] = v
+		}
+		required = append(required, reqs...)
+	}
+
+	// Extract request body properties
+	bodyProps, bodyReqs := extractRequestBodyProperties(operation)
+	for k, v := range bodyProps {
+		properties[k] = v
+	}
+	required = append(required, bodyReqs...)
+
+	// Convert properties to map[string]any for MCP schema compatibility
+	genericProps := make(map[string]any)
+	for k, v := range properties {
+		genericProps[k] = v
+	}
+
+	return mcp.ToolInputSchema{
+		Type:       "object",
+		Properties: genericProps,
+		Required:   required,
+	}
+}
+
+// GetToolAnnotations returns a ToolAnnotation struct with hints set based on HTTP method and OpenAPI operation details.
+// This helps the MCP server and clients understand the behavior and intent of the tool (endpoint).
+func GetToolAnnotations(method string, path string, operation *openapi3.Operation) mcp.ToolAnnotation {
+	// Default: all hints are nil (unset)
+	annotation := mcp.ToolAnnotation{
+		Title:           GetToolName(method, path, operation),
+		ReadOnlyHint:    nil,
+		DestructiveHint: nil,
+		IdempotentHint:  nil,
+		OpenWorldHint:   nil,
+	}
+
+	methodUpper := strings.ToUpper(method)
+
+	// ReadOnlyHint: GET, HEAD, OPTIONS are considered read-only and idempotent
+	if methodUpper == "GET" || methodUpper == "HEAD" || methodUpper == "OPTIONS" {
+		annotation.ReadOnlyHint = boolPtr(true)
+		annotation.IdempotentHint = boolPtr(true)
+	}
+
+	// DestructiveHint: DELETE is considered destructive
+	if methodUpper == "DELETE" {
+		annotation.DestructiveHint = boolPtr(true)
+	}
+
+	// IdempotentHint: PUT and DELETE are idempotent
+	if methodUpper == "PUT" || methodUpper == "DELETE" {
+		annotation.IdempotentHint = boolPtr(true)
+	}
+
+	// OpenWorldHint: If the operation description mentions 'open world', set this hint
+	if operation.Description != "" && strings.Contains(strings.ToLower(operation.Description), "open world") {
+		annotation.OpenWorldHint = boolPtr(true)
+	}
+
+	return annotation
+}
+
+// Displays the provided tool request
+func ShowRequest(request mcp.CallToolRequest) {
+	// Print the current request for debugging
+	log.Printf("Current request: %+v\n", request)
+}
+
+// Creates a MakeMCPApp from the provided OpenAPI specification
+func FromOpenAPISpecs(params CLIParams) MakeMCPApp {
+	var openApiSpec *openapi3.T = loadOpenAPISpec(params.Specs)
+	log.Printf("\nOpenAPI doc loaded: %#v\n\n", openApiSpec.Info.Title)
+
+	// Create config objects for MCP server and MakeMCP config
+	var app MakeMCPApp = NewMakeMCPApp(
+		openApiSpec.Info.Title,
+		openApiSpec.Info.Version,
+		string(params.Transport),
+	)
+	app.OpenAPIConfig = &OpenAPIConfig{BaseUrl: params.BaseURL}
+
+	// Iterate through OpenAPI specs to define MCP tools and related configs
+	for path, pathItem := range openApiSpec.Paths.Map() {
+		//
+		for method, operation := range pathItem.Operations() {
+			toolName := GetToolName(method, path, operation)
+			toolInputSchema := GetToolInputSchema(method, path, operation)
+			toolAnnotations := GetToolAnnotations(method, path, operation)
+
+			// TODO: include toolname, toolInputSchema and toolAnnotations in tool description
+			toolDescripton := GetToolDescription(method, path, operation)
+
+			toolSourceData, err := operation.MarshalJSON()
+			if err != nil {
+				log.Fatal("Error while creating tool source data.", err)
+			}
+
+			// TODO: we need to check when its a tool and when a resource/resource template
+			handlerInput := NewOpenAPIHandlerInput(method, path)
+			app.Tools = append(
+				app.Tools,
+				MakeMCPTool{
+					Tool: mcp.Tool{
+						Name:        toolName,
+						Description: toolDescripton,
+						InputSchema: toolInputSchema,
+						Annotations: toolAnnotations,
+					},
+					ToolSource: ToolSource{
+						URI:  "", // TODO
+						Data: toolSourceData,
+					},
+					OpenAPIHandlerInput: &handlerInput,
+				},
+			)
+		}
+	}
+
+	return app
+}
+
+// HandleOpenAPI now takes a CLIParams struct for all CLI arguments.
+func HandleOpenAPI(params CLIParams) {
+	var app MakeMCPApp = FromOpenAPISpecs(params)
+
+	// We could also load a json file and create handler functions from it
+	AddOpenAPIHandlerFunctions(&app, NewAPIClient(params.BaseURL))
+
+	// Store MakeMCPApp as json config
+	SaveMakeMCPAppToFile(app)
 
 	// if "config-only" flag was provided we exit here
-	if configOnly {
+	if params.ConfigOnly {
 		log.Printf("Created config file at:\n") // TODO: provide path to config file
-		log.Println("Exiting...")
+		log.Println("Exiting.")
 		os.Exit(0)
 	}
 
-	// Note: below code should be highly re-usable
-	// TODO: read makemcpNamespace from file -> we can skip that here actually
-	// TODO: get ToolConfigs including handlerFunctions from MakeMCPNamespace
-	// TODO: use below code to create server (this one should be fairly easy)
-
 	// Step 1: Collect tool configs
-	apiClient := NewAPIClient(baseURL)
-	toolConfigs := GetToolConfigsFromOpenAPI(openapiSpec, apiClient)
-	mcp_server := GetMCPServerFromToolConfigs(
-		openapiSpec.Info.Title,
-		openapiSpec.Info.Version,
-		toolConfigs,
-	)
+	mcp_server := GetMCPServer(app)
 
 	// Start the MCP server
-	switch transport {
+	switch params.Transport {
 	case TransportTypeHTTP:
 		log.Println("Starting as http MCP server...")
 		streamable_server := server.NewStreamableHTTPServer(mcp_server)
-		streamable_server.Start(fmt.Sprintf(":%s", port)) // TODO: make port configurable
+		streamable_server.Start(fmt.Sprintf(":%s", params.Port)) // TODO: make port configurable
 	case TransportTypeStdio:
 		log.Println("Starting as stdio MCP server...")
 		if err := server.ServeStdio(mcp_server); err != nil {
@@ -172,37 +371,16 @@ func HandleOpenAPI(
 	}
 }
 
-// NewAPIClient creates a new APIClient with the given baseURL.
-func NewAPIClient(baseURL string) *APIClient {
-	return &APIClient{
-		BaseURL:    baseURL,
-		HTTPClient: &http.Client{},
-	}
-}
-
-// Displays the provided tool request
-func ShowRequest(request mcp.CallToolRequest) {
-	// Print the current request for debugging
-	log.Printf("Current request: %+v\n", request)
-
-	// TODO: display all relevant information here
-}
-
-// makeOpenAPIToolHandlerWithClient returns a handler function for an MCP tool that uses the provided APIClient
-// to a specific HTTP method, path, and OpenAPI operation. The returned handler processes
-// tool requests and can be extended to map request arguments to HTTP requests for the
-// OpenAPI route.
-//
-// Parameters:
-//   - method: The HTTP method (e.g., "GET", "POST").
-//   - path: The OpenAPI path (e.g., "/users/{id}").
-//   - operation: The OpenAPI operation object.
-//
-// Returns:
-//   - A function that handles MCP tool requests for the given operation.
-func makeOpenAPIToolHandlerWithClient(method, path string, operation *openapi3.Operation, apiClient *APIClient) func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+func GetHandlerFunction(makeMcpTool MakeMCPTool, apiClient *APIClient) func(
+	ctx context.Context,
+	request mcp.CallToolRequest,
+) (*mcp.CallToolResult, error) {
 	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-		fullURL := apiClient.BaseURL + path
+		// TODO
+		fullURL := apiClient.BaseURL + makeMcpTool.OpenAPIHandlerInput.Path
+		log.Println("fullURL: ", fullURL)
+
+		method := makeMcpTool.OpenAPIHandlerInput.Method
 
 		// Prepare query parameters and body
 		var bodyReader io.Reader
@@ -211,17 +389,7 @@ func makeOpenAPIToolHandlerWithClient(method, path string, operation *openapi3.O
 
 		// Debugging
 		ShowRequest(request) // for debugging
-		log.Println("fullURL: ", fullURL)
 		log.Println("args: ", args)
-
-		// 1. check for URL parsing -> based on path params
-		// 2. check for headers, method, body
-		// 3. is there anything else?
-		//		- cookies - basically just headers, but could actually deserve their own config type
-		//		- response ? - should this be known in advance?
-		//		-
-		// understand "operation" better!
-		// based on this we should create a structure
 
 		// TODO: double check this
 		for k, v := range args {
@@ -265,51 +433,23 @@ func makeOpenAPIToolHandlerWithClient(method, path string, operation *openapi3.O
 		}
 
 		// TODO: check this this is the most appropriate way to return the request result
-		result := fmt.Sprintf("HTTP %s %s\nStatus: %d\nResponse: %s", method, fullURL, resp.StatusCode, string(body))
+		result := fmt.Sprintf(
+			"HTTP %s %s\nStatus: %d\nResponse: %s",
+			method, fullURL, resp.StatusCode, string(body),
+		)
 		return mcp.NewToolResultText(result), nil
 	}
 }
 
-// Extracts OpenAPI parameters into mcp.ToolOption slice
-func extractParameters(operation *openapi3.Operation) []mcp.ToolOption {
-	var options []mcp.ToolOption
-	for _, paramRef := range operation.Parameters {
-		if paramRef.Value == nil {
-			// TODO: is this even possible? What would that mean?
-			continue
-		}
-		param := paramRef.Value
-		paramType := param.Schema.Value.Type
-		log.Println("paramType: ", paramType)
-		// Only WithString for now, but could be extended for types
-		options = append(
-			options,
-			mcp.WithString(param.Name),
-		)
+// Takes an MakeMCPApp and creates + attaches tool handler functions for each tool
+func AddOpenAPIHandlerFunctions(app *MakeMCPApp, apiClient *APIClient) {
+	// TODO
+
+	// TODO: create and add handler here!
+	// if we wanted to created the handler functions here we
+	// need to KNOW and HANDLE the type of tools we are
+	// integrating with -> e.g. REST API, CLI-tools, etc.
+	for i := range app.Tools {
+		app.Tools[i].HandlerFunction = GetHandlerFunction(app.Tools[i], apiClient)
 	}
-	return options
-}
-
-// Extracts OpenAPI request body fields into mcp.ToolOption slice
-func extractRequestBodyArguments(operation *openapi3.Operation) []mcp.ToolOption {
-	var options []mcp.ToolOption
-	if operation.RequestBody != nil && operation.RequestBody.Value != nil {
-		for contentType, media := range operation.RequestBody.Value.Content {
-			if contentType == "application/json" && media.Schema != nil && media.Schema.Value != nil {
-				for propName := range media.Schema.Value.Properties {
-					options = append(
-						options,
-						mcp.WithString(propName),
-					)
-				}
-			}
-		}
-	}
-	return options
-}
-
-//  1. Translate OpenAPI spec into our internal config
-//     -> we should store the original definition of the operation as well
-func GetMCPServerConfigFromOpenAPISpecs() {
-
 }

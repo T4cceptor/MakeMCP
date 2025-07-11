@@ -46,15 +46,22 @@ func main() {
 						Value: "8080",
 						Usage: "Defines the port on which the HTTP server is started, ignored if transport is set to stdio.",
 					},
+					&cli.StringFlag{
+						Name:  "port",
+						Value: "8080",
+						Usage: "Defines the port on which the HTTP server is started, ignored if transport is set to stdio.",
+					},
 				},
 				Action: func(context context.Context, cmd *cli.Command) error {
 					log.Println("Creating config from flags and args (openapi subcommand)")
-					source := cmd.String("specs")
-					baseURL := cmd.String("base-url")
-					transport := TransportType(cmd.String("transport"))
-					configOnly := cmd.Bool("config-only")
-					port := cmd.String("port")
-					HandleOpenAPI(source, baseURL, transport, configOnly)
+					params := CLIParams{
+						Specs:      cmd.String("specs"),
+						BaseURL:    cmd.String("base-url"),
+						Transport:  TransportType(cmd.String("transport")),
+						ConfigOnly: cmd.Bool("config-only"),
+						Port:       cmd.String("port"),
+					}
+					HandleOpenAPI(params)
 					return nil
 				},
 			},

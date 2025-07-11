@@ -1,10 +1,10 @@
 package main
 
 import (
+	"context"
 	"net/http"
 
 	"github.com/mark3labs/mcp-go/mcp"
-	"github.com/mark3labs/mcp-go/server"
 )
 
 type TransportType string
@@ -20,77 +20,6 @@ type APIClient struct {
 	HTTPClient *http.Client
 }
 
-// Internal struct to hold config data
-// TODO: get rid of this in favor of other data structures
-type MCPToolConfig struct {
-	Name        string
-	Description string
-	Options     []mcp.ToolOption
-	Handler     server.ToolHandlerFunc
-}
-
-// MCPResource represents a resource with optional metadata fields.
-type MCPResource struct {
-	URI         string  `json:"uri"`
-	Name        string  `json:"name"`
-	Description *string `json:"description,omitempty"`
-	MimeType    *string `json:"mimeType,omitempty"`
-	Size        *int64  `json:"size,omitempty"`
-}
-
-// MCPResourceTemplate represents a template for resources, with optional metadata fields.
-type MCPResourceTemplate struct {
-	URITemplate string  `json:"uriTemplate"`
-	Name        string  `json:"name"`
-	Description *string `json:"description,omitempty"`
-	MimeType    *string `json:"mimeType,omitempty"`
-}
-
-// ToolAnnotation represents optional hints about tool behavior.
-type ToolAnnotation struct {
-	Title           *string `json:"title,omitempty"`
-	ReadOnlyHint    *bool   `json:"readOnlyHint,omitempty"`
-	DestructiveHint *bool   `json:"destructiveHint,omitempty"`
-	IdempotentHint  *bool   `json:"idempotentHint,omitempty"`
-	OpenWorldHint   *bool   `json:"openWorldHint,omitempty"`
-}
-
-type InputSchema struct {
-	Type       string         `json:"type"`               // should be "object" by default, can be of a pre-defined type, in this case the object is mapped against this type
-	Properties map[string]any `json:"inputSchema"`        // defines the properties this tool has
-	Required   []string       `json:"required,omitempty"` // defines which properties are required
-}
-
-// MCPTool represents a tool definition with input schema and optional annotations.
-type MCPTool struct {
-	Name        string          `json:"name"`
-	Description *string         `json:"description,omitempty"`
-	InputSchema InputSchema     `json:"inputSchema"`
-	Annotations *ToolAnnotation `json:"annotations,omitempty"`
-}
-
-// PromptArgument represents an argument for a prompt.
-type PromptArgument struct {
-	Name        string  `json:"name"`
-	Description *string `json:"description,omitempty"`
-	Required    *bool   `json:"required,omitempty"`
-}
-
-// MCPPrompt represents a prompt definition with optional arguments.
-type MCPPrompt struct {
-	Name        string           `json:"name"`
-	Description *string          `json:"description,omitempty"`
-	Arguments   []PromptArgument `json:"arguments,omitempty"`
-}
-
-// MCPConfig holds all resources, resource templates, and tools for the configuration.
-type MCPConfig struct {
-	Resources         []MCPResource         `json:"resources"`
-	ResourceTemplates []MCPResourceTemplate `json:"resourceTemplates"`
-	Tools             []MCPTool             `json:"tools"`
-	Prompts           []MCPPrompt           `json:"prompts"`
-}
-
 /*
 OpenAPI:
 - base url
@@ -99,7 +28,6 @@ OpenAPI:
 	-> method + path + params
 	-> params (incl. body, headers, query params, and path params)
 	have to be provided by the AI when calling the endpoint
-
 */
 
 type MakeMCPProcessor struct {
@@ -110,31 +38,104 @@ type MakeMCPProcessor struct {
 }
 
 // Data provided to create the corresponding operation in MakeMCP
-type MakeMCPInput struct {
-	URI  string         `json:"name"`
-	Data map[string]any `json:"data"`
+type ToolSource struct {
+	// source of the tool handler data
+	URI string `json:"name"`
+	// actual input data used to create the MakeMCP config
+	Data []byte `json:"data"`
 }
 
-// Additional MakeMCP information for a Tool.
-// The tool is defined by its name and the corresponding namespace.
+// Intended to be used as a potential handler input
+// Defines how a particular endpoint is to be called
+type OpenAPIHandlerInput struct {
+	Method     string
+	Path       string
+	Headers    map[string]string
+	Cookies    map[string]string
+	BodyAppend map[string]any
+}
+
+func NewOpenAPIHandlerInput(method, path string) OpenAPIHandlerInput {
+	return OpenAPIHandlerInput{
+		Method:     method,
+		Path:       path,
+		Headers:    make(map[string]string),
+		Cookies:    make(map[string]string),
+		BodyAppend: make(map[string]any),
+	}
+}
+
+// Extends mcp.Tool with additional MakeMCP information.
 type MakeMCPTool struct {
-	Name         string             `json:"name"`
-	HandlerInput map[string]any     `json:"handlerInput,omitempty"` // will be provided to tool handler function as-is, the tool handler needs to unmarshall this properly
-	Processors   []MakeMCPProcessor `json:"processors,omitempty"`
-	MakeMCPInput MakeMCPInput       `json:"makeMCPInput"` // holds thze original data provided when creating the config
+	// will be provided to tool handler function as-is,
+	// the tool handler needs to unmarshall this properly
+	// TODO: explain this better!
+	// TODO: how will this be used?
+	// TODO: to make this useful the handler function needs to be able to
+	// process it in some pre-defined way
+	HandlerInput        map[string]any       `json:"handlerInput,omitempty"`
+	OpenAPIHandlerInput *OpenAPIHandlerInput `json:"oapiHandlerInput,omitempty"`
+
+	HandlerFunction func(
+		ctx context.Context,
+		request mcp.CallToolRequest,
+	) (*mcp.CallToolResult, error) `json:"-"`
+
+	// Defines processors (incl their handler functions) that are applied
+	// to each result of the MCP call in order
+	Processors []MakeMCPProcessor `json:"processors,omitempty"`
+
+	// holds the original data provided when creating the config
+	ToolSource ToolSource `json:"toolSource"`
+
+	mcp.Tool
 }
 
-type MakeMCPConfig struct {
-	Tools map[string]MakeMCPTool `json:"tools"` // we only support Tools for now
-	// TODO: add other fields as well: resources, resourceTemplates, prompts
+type OpenAPIConfig struct {
+	BaseUrl string
 }
 
-type MakeMCPNamespace struct {
-	Mcp    MCPConfig     `json:"mcp"`
-	Config MakeMCPConfig `json:"config"`
+// Struct to hold all information about the MCP server, follows the MCP protocol.
+type MakeMCPApp struct {
+	Name    string        `json:"name"`
+	Version string        `json:"version"`
+	Tools   []MakeMCPTool `json:"tools"`
+	// TODO: support resources, resource templates, and prompts
+
+	Transport string  `json:"transport"`
+	Port      *string `json:"port,omitempty"`
+
+	// non-MCP fields
+	// holds the original OpenAPI config - TBD
+	OpenAPIConfig *OpenAPIConfig `json:"openapiConfig,omitempty"`
 }
 
-// TODO: check if this is correct -> how to define the root of a JSON object ?
-type RootConfig struct {
-	Namespaces map[string]MakeMCPNamespace `json:""`
+func NewMakeMCPApp(name, version, transport string) MakeMCPApp {
+	return MakeMCPApp{
+		name,
+		version,
+		[]MakeMCPTool{}, // empty slice
+		string(transport),
+		nil,
+		nil,
+	}
+}
+
+// The root json holds all apps and their configs as key-value pairs
+type MakeMCPApps map[string]MakeMCPApp
+
+// ToolInputProperty defines a property in the input schema for an MCP tool.
+type ToolInputProperty struct {
+	Type        string `json:"type"`
+	Description string `json:"description,omitempty"`
+	Location    string `json:"location"` // OpenAPI 'in' value: path, query, header, cookie, body, etc.
+}
+
+// CLIParams holds all CLI parameters for the makemcp openapi action.
+type CLIParams struct {
+	Specs      string
+	BaseURL    string
+	Transport  TransportType
+	ConfigOnly bool
+	Port       string
 }
