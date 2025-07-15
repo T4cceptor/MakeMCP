@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"regexp"
 	"strings"
 
 	"github.com/getkin/kin-openapi/openapi3"
@@ -63,44 +64,231 @@ func GetToolName(method string, path string, operation *openapi3.Operation) stri
 	return toolName
 }
 
-// TODO: this needs to be improved based on provided data in the operation
-func GetToolDescription(method string, path string, operation *openapi3.Operation) string {
+// ParameterInfo holds structured information about a parameter
+type ParameterInfo struct {
+	Name        string
+	Type        string
+	Location    string
+	Description string
+	Required    bool
+}
+
+// extractParameterInfo extracts parameter information from the tool input schema using prefix approach
+func extractParameterInfo(toolInputSchema mcp.ToolInputSchema) []ParameterInfo {
+	var params []ParameterInfo
+	locationPrefixes := []string{"path__", "query__", "header__", "cookie__", "body__"}
+
+	for prefixedName, prop := range toolInputSchema.Properties {
+		propMap, ok := prop.(map[string]any)
+		if !ok {
+			continue
+		}
+
+		// Parse the prefixed parameter name
+		var location string
+		var paramName string
+		found := false
+
+		for _, prefix := range locationPrefixes {
+			if strings.HasPrefix(prefixedName, prefix) {
+				location = strings.TrimSuffix(prefix, "__")
+				paramName = strings.TrimPrefix(prefixedName, prefix)
+				found = true
+				break
+			}
+		}
+
+		// Skip parameters that don't follow prefix convention
+		if !found {
+			continue
+		}
+
+		param := ParameterInfo{
+			Name:     paramName,
+			Type:     "string",
+			Location: location,
+		}
+
+		if t, ok := propMap["type"].(string); ok {
+			param.Type = t
+		}
+		if d, ok := propMap["description"].(string); ok {
+			param.Description = d
+		}
+
+		for _, req := range toolInputSchema.Required {
+			if req == prefixedName {
+				param.Required = true
+				break
+			}
+		}
+
+		params = append(params, param)
+	}
+	return params
+}
+
+// groupParametersByLocation groups parameters by their location (path, query, header, cookie, body)
+func groupParametersByLocation(params []ParameterInfo) map[string][]ParameterInfo {
+	grouped := make(map[string][]ParameterInfo)
+	for _, param := range params {
+		grouped[param.Location] = append(grouped[param.Location], param)
+	}
+	return grouped
+}
+
+// formatParametersByLocation formats parameters grouped by location for display
+func formatParametersByLocation(grouped map[string][]ParameterInfo) string {
+	var sections []string
+
+	// Order of locations for consistent output
+	locationOrder := []string{"path", "query", "header", "cookie", "body"}
+	locationTitles := map[string]string{
+		"path":   "Path Parameters:",
+		"query":  "Query Parameters:",
+		"header": "Header Parameters:",
+		"cookie": "Cookie Parameters:",
+		"body":   "Body Parameters:",
+	}
+
+	for _, location := range locationOrder {
+		if params, exists := grouped[location]; exists && len(params) > 0 {
+			sections = append(sections, locationTitles[location])
+			sections = append(sections, "")
+
+			for _, param := range params {
+				requiredStr := ""
+				if param.Required {
+					requiredStr = " (Required)"
+				}
+
+				descStr := ""
+				if param.Description != "" {
+					descStr = fmt.Sprintf(": %s", param.Description)
+				}
+
+				sections = append(sections, fmt.Sprintf("- %s%s%s", param.Name, requiredStr, descStr))
+			}
+			sections = append(sections, "")
+		}
+	}
+
+	return strings.Join(sections, "\n")
+}
+
+// replaceArgsSection removes or replaces any existing "Args:" or "Arguments:" sections in the description
+func replaceArgsSection(description string) string {
+	// Common patterns for argument sections that should be replaced
+	// Using simpler patterns without lookaheads since Go doesn't support them
+	argsSectionPatterns := []string{
+		`(?i)\n\s*Args?:\s*\n[^#]*?(\n\n|\z)`,
+		`(?i)\n\s*Arguments?:\s*\n[^#]*?(\n\n|\z)`,
+		`(?i)\n\s*Parameters?:\s*\n[^#]*?(\n\n|\z)`,
+	}
+
+	for _, pattern := range argsSectionPatterns {
+		re := regexp.MustCompile(pattern)
+		description = re.ReplaceAllString(description, "\n\n")
+	}
+
+	// Clean up any extra newlines
+	description = strings.TrimSpace(description)
+	return description
+}
+
+// generateExampleInput creates example input JSON for the tool using prefix approach
+func generateExampleInput(params []ParameterInfo) string {
+	sampleValues := map[string]any{
+		"string":   "example string",
+		"integer":  42,
+		"number":   3.14,
+		"boolean":  true,
+		"float":    2.718,
+		"datetime": "2025-07-14T12:34:56Z",
+		"url":      "https://example.com/resource",
+		"email":    "user@example.com",
+		"object":   map[string]any{"field": "value"},
+	}
+
+	exampleParams := make(map[string]any)
+	for _, param := range params {
+		var sampleValue any
+		switch param.Type {
+		case "string":
+			if strings.Contains(strings.ToLower(param.Name), "email") {
+				sampleValue = sampleValues["email"]
+			} else if strings.Contains(strings.ToLower(param.Name), "url") {
+				sampleValue = sampleValues["url"]
+			} else if strings.Contains(strings.ToLower(param.Name), "date") || strings.Contains(strings.ToLower(param.Name), "time") {
+				sampleValue = sampleValues["datetime"]
+			} else {
+				sampleValue = sampleValues["string"]
+			}
+		case "integer":
+			sampleValue = sampleValues["integer"]
+		case "number":
+			sampleValue = sampleValues["number"]
+		case "float":
+			sampleValue = sampleValues["float"]
+		case "boolean":
+			sampleValue = sampleValues["boolean"]
+		case "object":
+			sampleValue = sampleValues["object"]
+		default:
+			sampleValue = fmt.Sprintf("<%s_value>", param.Name)
+		}
+
+		// Use prefix approach: location__parameterName
+		prefixedName := fmt.Sprintf("%s__%s", param.Location, param.Name)
+		exampleParams[prefixedName] = sampleValue
+	}
+
+	exampleJSON, _ := json.MarshalIndent(exampleParams, "", "  ")
+	return string(exampleJSON)
+}
+
+// GetToolDescription creates a structured description for an OpenAPI operation
+func GetToolDescription(
+	method string,
+	path string,
+	operation *openapi3.Operation,
+	toolInputSchema mcp.ToolInputSchema,
+) string {
+	// Start with operation summary and description
 	description := operation.Summary
 	if operation.Description != "" {
 		desc := strings.ReplaceAll(operation.Description, "\n", "\n\n")
-		description = fmt.Sprintf("%v\n%v", description, desc)
+		if description != "" {
+			description = fmt.Sprintf("%s\n\n%s", description, desc)
+		} else {
+			description = desc
+		}
 	}
-	// TODO: we need to improve the tool description by quite a bit, as the AI is not aware how the different parameters are supposed to be provided.
 
-	description = fmt.Sprintf("%v\n Parameters are to be provided in the following schema: {'parameter_name': <name of the parameter, e.g. user_id>, 'parameter_value': <value of the parameter, e.g. 2>, 'location': <where the parameter is to be included, can be one of: path, query, header, cookie, body - will determine in which part of the request the param is placed>}", description)
+	// Replace any existing "Args:" or "Arguments:" sections with our structured parameter sections
+	// This handles cases where OpenAPI descriptions might contain informal argument lists
+	description = replaceArgsSection(description)
+
+	// Extract and group parameters
+	params := extractParameterInfo(toolInputSchema)
+	if len(params) > 0 {
+		grouped := groupParametersByLocation(params)
+		paramSection := formatParametersByLocation(grouped)
+		if paramSection != "" {
+			description = fmt.Sprintf("%s\n\n%s", description, strings.TrimSpace(paramSection))
+		}
+	}
+
+	// Add example input with clear formatting instructions
+	if len(params) > 0 {
+		exampleInput := generateExampleInput(params)
+		description = fmt.Sprintf("%s\n\nExample input:\n%s", description, exampleInput)
+
+		// Add explicit instruction for AI agents about the required format
+		description = fmt.Sprintf("%s\n\nIMPORTANT: When calling this tool, you must provide parameters using the prefix format where parameter names include their location (e.g., 'path__user_id', 'body__email') as demonstrated in the example above.", description)
+	}
+
 	log.Println("Tool description: \n", description)
-
-	// TODO: we need to add all sorts of parameters here, as they are supposed to be provided!
-
-	/*
-			Stops a current multipart upload and removes any parts of an incomplete upload, which would otherwise incur storage costs.
-
-		Path Parameters:
-
-		Bucket (Required): The destination bucket for the upload.
-
-		Key (Required): Key of the object for which the multipart upload was initiated.
-
-		Query Parameters:
-
-		uploadId (Required): Upload ID that identifies the multipart upload.
-		Responses:
-
-		204 (Success): Success
-		Content-Type: text/xml
-
-		Response Properties:
-
-		Example:
-
-		404: NoSuchUpload
-		Content-Type: text/xml
-	*/
 	return description
 }
 
@@ -118,6 +306,9 @@ func extractParametersByIn(operation *openapi3.Operation, in string) (map[string
 	properties := make(map[string]ToolInputProperty)
 	var required []string
 	for _, paramRef := range operation.Parameters {
+		// TODO:
+		// I cannot really follow the OpenAPI schema here
+		// technically we should see other fields in here as well
 		if paramRef.Value == nil {
 			continue
 		}
@@ -205,30 +396,47 @@ func GetToolInputSchema(method string, path string, operation *openapi3.Operatio
 
 	Would you like a code template for extracting these into an MCP input schema?
 	*/
-	// Build the properties and required fields for the input schema
-	properties := make(map[string]ToolInputProperty)
+
+	// Build the properties and required fields for the input schema using prefix approach
+	genericProps := make(map[string]any)
 	var required []string
 
 	// Extract path, query, header, and cookie parameters
 	for _, in := range []string{"path", "query", "header", "cookie"} {
 		props, reqs := extractParametersByIn(operation, in)
-		for k, v := range props {
-			properties[k] = v
+		for paramName, prop := range props {
+			// Use prefix approach: location__parameterName
+			prefixedName := fmt.Sprintf("%s__%s", in, paramName)
+			genericProps[prefixedName] = map[string]interface{}{
+				"type":        prop.Type,
+				"description": prop.Description,
+			}
+			// Update required list with prefixed names
+			for _, reqName := range reqs {
+				if reqName == paramName {
+					required = append(required, prefixedName)
+					break
+				}
+			}
 		}
-		required = append(required, reqs...)
 	}
 
 	// Extract request body properties
 	bodyProps, bodyReqs := extractRequestBodyProperties(operation)
-	for k, v := range bodyProps {
-		properties[k] = v
-	}
-	required = append(required, bodyReqs...)
-
-	// Convert properties to map[string]any for MCP schema compatibility
-	genericProps := make(map[string]any)
-	for k, v := range properties {
-		genericProps[k] = v
+	for paramName, prop := range bodyProps {
+		// Use prefix approach: body__parameterName
+		prefixedName := fmt.Sprintf("body__%s", paramName)
+		genericProps[prefixedName] = map[string]interface{}{
+			"type":        prop.Type,
+			"description": prop.Description,
+		}
+		// Update required list with prefixed names
+		for _, reqName := range bodyReqs {
+			if reqName == paramName {
+				required = append(required, prefixedName)
+				break
+			}
+		}
 	}
 
 	return mcp.ToolInputSchema{
@@ -304,7 +512,12 @@ func FromOpenAPISpecs(params CLIParams) MakeMCPApp {
 			toolAnnotations := GetToolAnnotations(method, path, operation)
 
 			// TODO: include toolname, toolInputSchema and toolAnnotations in tool description
-			toolDescripton := GetToolDescription(method, path, operation)
+			toolDescripton := GetToolDescription(
+				method,
+				path,
+				operation,
+				toolInputSchema,
+			)
 
 			toolSourceData, err := operation.MarshalJSON()
 			if err != nil {
@@ -371,54 +584,130 @@ func HandleOpenAPI(params CLIParams) {
 	}
 }
 
+// Utility: substitute path parameters in URL template
+func substitutePathParams(path string, pathParams map[string]interface{}) string {
+	for k, v := range pathParams {
+		placeholder := fmt.Sprintf("{%s}", k)
+		path = strings.ReplaceAll(path, placeholder, fmt.Sprintf("%v", v))
+	}
+	return path
+}
+
+// Utility: encode query parameters
+func encodeQueryParams(queryParams map[string]interface{}) string {
+	values := url.Values{}
+	for k, v := range queryParams {
+		values.Set(k, fmt.Sprintf("%v", v))
+	}
+	return values.Encode()
+}
+
+// parsePrefixedParameters parses parameters using prefix approach and returns SplitParams
+func parsePrefixedParameters(argsRaw map[string]any) SplitParams {
+	params := NewSplitParams()
+
+	// Define valid location prefixes
+	locationPrefixes := []string{"path__", "query__", "header__", "cookie__", "body__"}
+
+	// Parse prefixed parameters and organize by location
+	for prefixedName, value := range argsRaw {
+		var location string
+		var paramName string
+		found := false
+
+		// Check each prefix to find a match
+		for _, prefix := range locationPrefixes {
+			if strings.HasPrefix(prefixedName, prefix) {
+				location = strings.TrimSuffix(prefix, "__")
+				paramName = strings.TrimPrefix(prefixedName, prefix)
+				found = true
+				break
+			}
+		}
+
+		// Skip invalid parameter names that don't follow prefix convention
+		if !found {
+			continue
+		}
+
+		// Add to appropriate location map in SplitParams
+		switch location {
+		case "path":
+			params.Path[paramName] = value
+		case "query":
+			params.Query[paramName] = value
+		case "header":
+			params.Header[paramName] = value
+		case "cookie":
+			params.Cookie[paramName] = value
+		case "body":
+			params.Body[paramName] = value
+		}
+	}
+
+	return params
+}
+
 func GetHandlerFunction(makeMcpTool MakeMCPTool, apiClient *APIClient) func(
 	ctx context.Context,
 	request mcp.CallToolRequest,
 ) (*mcp.CallToolResult, error) {
 	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-		// TODO
-		fullURL := apiClient.BaseURL + makeMcpTool.OpenAPIHandlerInput.Path
+		// Parse parameters using prefix approach
+		argsRaw := request.GetArguments()
+		params := parsePrefixedParameters(argsRaw)
+
+		// Substitute path parameters
+		pathWithParams := substitutePathParams(makeMcpTool.OpenAPIHandlerInput.Path, params.Path)
+		fullURL := apiClient.BaseURL + pathWithParams
 		log.Println("fullURL: ", fullURL)
 
 		method := makeMcpTool.OpenAPIHandlerInput.Method
 
 		// Prepare query parameters and body
 		var bodyReader io.Reader
-		params := url.Values{}
-		args := request.GetArguments()
+
+		// Encode query parameters
+		if len(params.Query) > 0 && (method == http.MethodGet || method == http.MethodDelete) {
+			encodedQuery := encodeQueryParams(params.Query)
+			if encodedQuery != "" {
+				fullURL = fullURL + "?" + encodedQuery
+			}
+		}
+
+		// Prepare body for non-GET/DELETE
+		if len(params.Body) > 0 && !(method == http.MethodGet || method == http.MethodDelete) {
+			jsonBody, err := json.Marshal(params.Body)
+			if err != nil {
+				return nil, err
+			}
+			bodyReader = io.NopCloser(bytes.NewReader(jsonBody))
+		}
 
 		// Debugging
 		ShowRequest(request) // for debugging
-		log.Println("args: ", args)
-
-		// TODO: double check this
-		for k, v := range args {
-			if method == http.MethodGet || method == http.MethodDelete {
-				params.Add(k, fmt.Sprintf("%v", v))
-			} else {
-				if bodyReader == nil {
-					jsonBody, err := json.Marshal(args)
-					if err != nil {
-						return nil, err
-					}
-					bodyReader = io.NopCloser(bytes.NewReader(jsonBody))
-				}
-			}
-		}
-		// TODO: why only on Get and Delete?
-		if len(params) > 0 && (method == http.MethodGet || method == http.MethodDelete) {
-			fullURL = fullURL + "?" + params.Encode()
-		}
 
 		// Create the HTTP request
-		// TODO: handle auth -> should be forwarded?
-		// -> check how auth is handled within MCP
 		req, err := http.NewRequestWithContext(ctx, method, fullURL, bodyReader)
 		if err != nil {
 			return nil, err
 		}
 		if bodyReader != nil {
 			req.Header.Set("Content-Type", "application/json")
+		}
+
+		// Set headers
+		for k, v := range params.Header {
+			req.Header.Set(k, fmt.Sprintf("%v", v))
+		}
+
+		// Set cookies
+		if len(params.Cookie) > 0 {
+			var cookieStrings []string
+			for k, v := range params.Cookie {
+				cookieStrings = append(cookieStrings, fmt.Sprintf("%s=%v", k, v))
+			}
+			req.Header.Set("Cookie", strings.Join(cookieStrings, "; "))
 		}
 
 		resp, err := apiClient.HTTPClient.Do(req)

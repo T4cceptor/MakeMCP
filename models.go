@@ -139,3 +139,48 @@ type CLIParams struct {
 	ConfigOnly bool
 	Port       string
 }
+
+// SplitParams groups all parameter maps by location for handler logic
+// Each field is a map[string]interface{} for its respective location
+// Used in GetHandlerFunction for robust parameter routing
+type SplitParams struct {
+	Path   map[string]interface{}
+	Query  map[string]interface{}
+	Header map[string]interface{}
+	Cookie map[string]interface{}
+	Body   map[string]interface{}
+}
+
+// NewSplitParams returns a SplitParams struct with all maps initialized
+func NewSplitParams() SplitParams {
+	return SplitParams{
+		Path:   map[string]interface{}{},
+		Query:  map[string]interface{}{},
+		Header: map[string]interface{}{},
+		Cookie: map[string]interface{}{},
+		Body:   map[string]interface{}{},
+	}
+}
+
+// AttachParams takes paramList and attaches values to the correct SplitParams fields
+func (params *SplitParams) AttachParams(paramList []map[string]interface{}) {
+	for _, param := range paramList {
+		name, _ := param["parameter_name"].(string)
+		value := param["parameter_value"]
+		location, _ := param["location"].(string)
+		switch location {
+		case "path":
+			params.Path[name] = value
+		case "query":
+			params.Query[name] = value
+		case "header":
+			params.Header[name] = value
+		case "cookie":
+			params.Cookie[name] = value
+		case "body":
+			params.Body[name] = value
+		default:
+			params.Query[name] = value // fallback
+		}
+	}
+}
