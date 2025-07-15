@@ -18,7 +18,32 @@ import (
 	"github.com/mark3labs/mcp-go/server"
 )
 
-// Uses kin-openapi/openapi3 library to load OpenAPI specs from URL or file
+// =============================================================================
+// CONSTANTS AND UTILITY FUNCTIONS
+// =============================================================================
+
+// locationPrefixes defines the valid location prefixes for parameter names
+var locationPrefixes = []string{"path__", "query__", "header__", "cookie__", "body__"}
+
+// parseLocationPrefix extracts location and parameter name from a prefixed parameter name
+// Returns the location, parameter name, and whether a valid prefix was found
+func parseLocationPrefix(prefixedName string) (location string, paramName string, found bool) {
+	for _, prefix := range locationPrefixes {
+		if strings.HasPrefix(prefixedName, prefix) {
+			location = strings.TrimSuffix(prefix, "__")
+			paramName = strings.TrimPrefix(prefixedName, prefix)
+			found = true
+			return
+		}
+	}
+	return "", "", false
+}
+
+// =============================================================================
+// OPENAPI SPEC LOADING AND DETECTION
+// =============================================================================
+
+// loadOpenAPISpec loads an OpenAPI specification from a URL or local file path
 func loadOpenAPISpec(openAPISpecLocation string) *openapi3.T {
 	log.Println("Loading OpenAPI spec from:", openAPISpecLocation)
 	loader := openapi3.NewLoader()
@@ -46,7 +71,7 @@ func loadOpenAPISpec(openAPISpecLocation string) *openapi3.T {
 	}
 }
 
-// Determines the sourceType based on the provided openAPISpecLocation
+// detectSourceType determines whether the spec location is a URL or file path
 func detectSourceType(openAPISpecLocation string) string {
 	u, err := url.Parse(openAPISpecLocation)
 	if err == nil && u.Scheme != "" && (u.Scheme == "http" || u.Scheme == "https") {
@@ -55,7 +80,11 @@ func detectSourceType(openAPISpecLocation string) string {
 	return "file"
 }
 
-// TODO: we need to abstract this better
+// =============================================================================
+// TOOL NAME AND PARAMETER PROCESSING
+// =============================================================================
+
+// GetToolName generates a tool name from operation ID or method and path
 func GetToolName(method string, path string, operation *openapi3.Operation) string {
 	toolName := operation.OperationID
 	if toolName == "" {
@@ -76,7 +105,6 @@ type ParameterInfo struct {
 // extractParameterInfo extracts parameter information from the tool input schema using prefix approach
 func extractParameterInfo(toolInputSchema mcp.ToolInputSchema) []ParameterInfo {
 	var params []ParameterInfo
-	locationPrefixes := []string{"path__", "query__", "header__", "cookie__", "body__"}
 
 	for prefixedName, prop := range toolInputSchema.Properties {
 		propMap, ok := prop.(map[string]any)
@@ -85,20 +113,7 @@ func extractParameterInfo(toolInputSchema mcp.ToolInputSchema) []ParameterInfo {
 		}
 
 		// Parse the prefixed parameter name
-		var location string
-		var paramName string
-		found := false
-
-		for _, prefix := range locationPrefixes {
-			if strings.HasPrefix(prefixedName, prefix) {
-				location = strings.TrimSuffix(prefix, "__")
-				paramName = strings.TrimPrefix(prefixedName, prefix)
-				found = true
-				break
-			}
-		}
-
-		// Skip parameters that don't follow prefix convention
+		location, paramName, found := parseLocationPrefix(prefixedName)
 		if !found {
 			continue
 		}
@@ -175,6 +190,10 @@ func formatParametersByLocation(grouped map[string][]ParameterInfo) string {
 
 	return strings.Join(sections, "\n")
 }
+
+// =============================================================================
+// TOOL DESCRIPTION GENERATION
+// =============================================================================
 
 // replaceArgsSection removes or replaces any existing "Args:" or "Arguments:" sections in the description
 func replaceArgsSection(description string) string {
@@ -292,6 +311,10 @@ func GetToolDescription(
 	return description
 }
 
+// =============================================================================
+// TOOL INPUT SCHEMA GENERATION
+// =============================================================================
+
 // getSchemaTypeString returns the first OpenAPI type if present, otherwise defaults to "string".
 func getSchemaTypeString(schema *openapi3.Schema) string {
 	if schema != nil && schema.Type != nil && len(*schema.Type) > 0 {
@@ -306,9 +329,6 @@ func extractParametersByIn(operation *openapi3.Operation, in string) (map[string
 	properties := make(map[string]ToolInputProperty)
 	var required []string
 	for _, paramRef := range operation.Parameters {
-		// TODO:
-		// I cannot really follow the OpenAPI schema here
-		// technically we should see other fields in here as well
 		if paramRef.Value == nil {
 			continue
 		}
@@ -362,41 +382,35 @@ func extractRequestBodyProperties(operation *openapi3.Operation) (map[string]Too
 	return properties, required
 }
 
+// GetToolInputSchema generates an MCP tool input schema from an OpenAPI operation.
+//
+// This function extracts parameter definitions from various sources in the OpenAPI operation
+// and creates a unified input schema using the prefix approach for parameter naming.
+//
+// Parameters:
+//   - method: HTTP method (GET, POST, PUT, DELETE, etc.)
+//   - path: API endpoint path (e.g., "/users/{id}")
+//   - operation: OpenAPI operation object containing parameter definitions
+//
+// Returns:
+//   - mcp.ToolInputSchema: Schema object defining the expected input format
+//
+// Parameter Sources:
+//   - Path parameters: from operation.parameters with "in": "path"
+//   - Query parameters: from operation.parameters with "in": "query"
+//   - Header parameters: from operation.parameters with "in": "header"
+//   - Cookie parameters: from operation.parameters with "in": "cookie"
+//   - Body parameters: from operation.requestBody schema properties
+//
+// Prefix Format:
+// All parameters are prefixed with their location for clarity:
+//   - path__user_id: path parameter named "user_id"
+//   - query__limit: query parameter named "limit"
+//   - body__email: body parameter named "email"
+//
+// This approach eliminates ambiguity and makes it easier for AI agents to
+// understand where each parameter should be placed in the HTTP request.
 func GetToolInputSchema(method string, path string, operation *openapi3.Operation) mcp.ToolInputSchema {
-	/* NOTE: LEAVE THIS AS-IS, it serves documentation for now and will be removed later once implementation is finished
-	To implement GetToolInputSchema, you need to extract all the fields from the OpenAPI operation that define what input the tool expects. The following fields from the OpenAPI operation impact the input schema for the MCP tool:
-
-	Fields Impacting the Input Schema
-	- Path Parameters
-		Defined in the parameters array with "in": "path".
-		Example: /users/{id} → parameter id.
-	- Query Parameters
-		Defined in the parameters array with "in": "query".
-		Example: /users?active=true → parameter active.
-	- Header Parameters
-		Defined in the parameters array with "in": "header".
-		Example: X-Request-ID header.
-	- Cookie Parameters
-		Defined in the parameters array with "in": "cookie".
-	- Request Body
-		Defined in the requestBody field.
-		Most commonly, this is a JSON object with a schema describing its properties.
-
-	- Required Flags
-		Both parameters and request body properties can be marked as required.
-
-	Summary Table
-		Source	OpenAPI Field	Example/Notes
-		Path params	parameters (in=path)	/users/{id}
-		Query params	parameters (in=query)	/users?active=true
-		Header params	parameters (in=header)	X-Request-ID
-		Cookie params	parameters (in=cookie)	session_id
-		Request body	requestBody	JSON, form, etc.
-		Required flags	required	Both in parameters and body
-
-	Would you like a code template for extracting these into an MCP input schema?
-	*/
-
 	// Build the properties and required fields for the input schema using prefix approach
 	genericProps := make(map[string]any)
 	var required []string
@@ -446,6 +460,10 @@ func GetToolInputSchema(method string, path string, operation *openapi3.Operatio
 	}
 }
 
+// =============================================================================
+// TOOL ANNOTATIONS
+// =============================================================================
+
 // GetToolAnnotations returns a ToolAnnotation struct with hints set based on HTTP method and OpenAPI operation details.
 // This helps the MCP server and clients understand the behavior and intent of the tool (endpoint).
 func GetToolAnnotations(method string, path string, operation *openapi3.Operation) mcp.ToolAnnotation {
@@ -484,13 +502,11 @@ func GetToolAnnotations(method string, path string, operation *openapi3.Operatio
 	return annotation
 }
 
-// Displays the provided tool request
-func ShowRequest(request mcp.CallToolRequest) {
-	// Print the current request for debugging
-	log.Printf("Current request: %+v\n", request)
-}
+// =============================================================================
+// MAIN OPENAPI PROCESSING
+// =============================================================================
 
-// Creates a MakeMCPApp from the provided OpenAPI specification
+// FromOpenAPISpecs creates a MakeMCPApp from the provided OpenAPI specification
 func FromOpenAPISpecs(params CLIParams) MakeMCPApp {
 	var openApiSpec *openapi3.T = loadOpenAPISpec(params.Specs)
 	log.Printf("\nOpenAPI doc loaded: %#v\n\n", openApiSpec.Info.Title)
@@ -548,7 +564,7 @@ func FromOpenAPISpecs(params CLIParams) MakeMCPApp {
 	return app
 }
 
-// HandleOpenAPI now takes a CLIParams struct for all CLI arguments.
+// HandleOpenAPI processes OpenAPI specifications and starts the MCP server
 func HandleOpenAPI(params CLIParams) {
 	var app MakeMCPApp = FromOpenAPISpecs(params)
 
@@ -584,8 +600,12 @@ func HandleOpenAPI(params CLIParams) {
 	}
 }
 
-// Utility: substitute path parameters in URL template
-func substitutePathParams(path string, pathParams map[string]interface{}) string {
+// =============================================================================
+// HTTP REQUEST HANDLING AND UTILITIES
+// =============================================================================
+
+// substitutePathParams substitutes path parameters in URL template
+func substitutePathParams(path string, pathParams map[string]any) string {
 	for k, v := range pathParams {
 		placeholder := fmt.Sprintf("{%s}", k)
 		path = strings.ReplaceAll(path, placeholder, fmt.Sprintf("%v", v))
@@ -593,8 +613,8 @@ func substitutePathParams(path string, pathParams map[string]interface{}) string
 	return path
 }
 
-// Utility: encode query parameters
-func encodeQueryParams(queryParams map[string]interface{}) string {
+// encodeQueryParams encodes query parameters for URL
+func encodeQueryParams(queryParams map[string]any) string {
 	values := url.Values{}
 	for k, v := range queryParams {
 		values.Set(k, fmt.Sprintf("%v", v))
@@ -606,26 +626,9 @@ func encodeQueryParams(queryParams map[string]interface{}) string {
 func parsePrefixedParameters(argsRaw map[string]any) SplitParams {
 	params := NewSplitParams()
 
-	// Define valid location prefixes
-	locationPrefixes := []string{"path__", "query__", "header__", "cookie__", "body__"}
-
 	// Parse prefixed parameters and organize by location
 	for prefixedName, value := range argsRaw {
-		var location string
-		var paramName string
-		found := false
-
-		// Check each prefix to find a match
-		for _, prefix := range locationPrefixes {
-			if strings.HasPrefix(prefixedName, prefix) {
-				location = strings.TrimSuffix(prefix, "__")
-				paramName = strings.TrimPrefix(prefixedName, prefix)
-				found = true
-				break
-			}
-		}
-
-		// Skip invalid parameter names that don't follow prefix convention
+		location, paramName, found := parseLocationPrefix(prefixedName)
 		if !found {
 			continue
 		}
@@ -648,6 +651,43 @@ func parsePrefixedParameters(argsRaw map[string]any) SplitParams {
 	return params
 }
 
+// GetHandlerFunction creates an MCP tool handler function for an OpenAPI operation.
+//
+// This function returns a handler that processes MCP tool requests and converts them
+// into HTTP requests to the underlying API. It handles parameter parsing, HTTP request
+// construction, execution, and response formatting.
+//
+// Parameters:
+//   - makeMcpTool: MCP tool configuration containing OpenAPI operation details
+//   - apiClient: HTTP client configured with base URL and other settings
+//
+// Returns:
+//   - A function that handles MCP tool requests with the signature:
+//     func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error)
+//
+// Request Processing Flow:
+//   1. Parse prefixed parameters from the MCP request (e.g., path__user_id)
+//   2. Group parameters by location (path, query, header, cookie, body)
+//   3. Substitute path parameters in the URL template
+//   4. Encode query parameters for GET/DELETE requests
+//   5. Marshal body parameters to JSON for POST/PUT requests
+//   6. Set headers and cookies on the HTTP request
+//   7. Execute the HTTP request
+//   8. Format and return the response
+//
+// Parameter Format:
+// The handler expects parameters in prefix format:
+//   - path__id: substituted into URL path placeholders
+//   - query__limit: added as URL query parameters
+//   - header__authorization: set as HTTP headers
+//   - cookie__session_id: set as HTTP cookies
+//   - body__email: included in JSON request body
+//
+// Response Format:
+// Returns a formatted text result containing:
+//   - HTTP method and final URL
+//   - Response status code
+//   - Response body content
 func GetHandlerFunction(makeMcpTool MakeMCPTool, apiClient *APIClient) func(
 	ctx context.Context,
 	request mcp.CallToolRequest,
@@ -684,9 +724,6 @@ func GetHandlerFunction(makeMcpTool MakeMCPTool, apiClient *APIClient) func(
 			bodyReader = io.NopCloser(bytes.NewReader(jsonBody))
 		}
 
-		// Debugging
-		ShowRequest(request) // for debugging
-
 		// Create the HTTP request
 		req, err := http.NewRequestWithContext(ctx, method, fullURL, bodyReader)
 		if err != nil {
@@ -721,7 +758,7 @@ func GetHandlerFunction(makeMcpTool MakeMCPTool, apiClient *APIClient) func(
 			return nil, err
 		}
 
-		// TODO: check this this is the most appropriate way to return the request result
+		// Format the response for the MCP client
 		result := fmt.Sprintf(
 			"HTTP %s %s\nStatus: %d\nResponse: %s",
 			method, fullURL, resp.StatusCode, string(body),
@@ -730,14 +767,8 @@ func GetHandlerFunction(makeMcpTool MakeMCPTool, apiClient *APIClient) func(
 	}
 }
 
-// Takes an MakeMCPApp and creates + attaches tool handler functions for each tool
+// AddOpenAPIHandlerFunctions creates and attaches handler functions for each OpenAPI tool
 func AddOpenAPIHandlerFunctions(app *MakeMCPApp, apiClient *APIClient) {
-	// TODO
-
-	// TODO: create and add handler here!
-	// if we wanted to created the handler functions here we
-	// need to KNOW and HANDLE the type of tools we are
-	// integrating with -> e.g. REST API, CLI-tools, etc.
 	for i := range app.Tools {
 		app.Tools[i].HandlerFunction = GetHandlerFunction(app.Tools[i], apiClient)
 	}
