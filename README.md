@@ -43,3 +43,9 @@ Basically you can run this locally or remote and reference it in your favorite M
 - kin-openapi (https://github.com/getkin/kin-openapi)
 - mcp-go (https://github.com/mark3labs/mcp-go)
 
+### Roadmap & Contributions
+- in short term:
+    - MCP proxies
+    - auto-CLI tool support
+    - enable processors and simplify ability to extend and modify the MCP tools
+    - frontend for management and modification of MCP tools

@@ -1,6 +1,13 @@
 # tmp folder
 tmp/
 
+# makemcp & config files
+*.makemcp.json
+makemcp
+
+# Personal VS Code MCP configuration
+.vscode/mcp.json
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
