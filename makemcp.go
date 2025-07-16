@@ -16,6 +16,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"os"
 
@@ -77,6 +78,39 @@ func main() {
 						DevMode:    cmd.Bool("dev-mode"),
 					}
 					HandleOpenAPI(params)
+					return nil
+				},
+			},
+			{
+				Name:  "file",
+				Usage: "Load a MakeMCP configuration file and start the server.",
+				Args:  true,
+				ArgsUsage: "<config-file>",
+				Flags: []cli.Flag{
+					&cli.StringFlag{
+						Name:    "transport",
+						Aliases: []string{"t"},
+						Value:   "",
+						Usage:   "Override transport protocol for this MCP server - can be either stdio or http. If not specified, uses the transport from the config file.",
+					},
+					&cli.StringFlag{
+						Name:  "port",
+						Value: "",
+						Usage: "Override the port on which the HTTP server is started. If not specified, uses the port from the config file or defaults to 8080.",
+					},
+				},
+				Action: func(context context.Context, cmd *cli.Command) error {
+					args := cmd.Args()
+					if args.Len() == 0 {
+						return fmt.Errorf("config file path is required")
+					}
+					
+					configPath := args.First()
+					transportOverride := cmd.String("transport")
+					portOverride := cmd.String("port")
+					
+					log.Printf("Loading MakeMCP configuration from: %s", configPath)
+					HandleFile(configPath, transportOverride, portOverride)
 					return nil
 				},
 			},

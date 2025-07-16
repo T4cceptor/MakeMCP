@@ -30,19 +30,19 @@ type URLSecurityIssue struct {
 // checkURLSecurity analyzes a URL for potential security issues
 func checkURLSecurity(rawURL string) []URLSecurityIssue {
 	var issues []URLSecurityIssue
-	
+
 	// Skip file paths
 	if !strings.HasPrefix(rawURL, "http://") && !strings.HasPrefix(rawURL, "https://") {
 		return issues
 	}
-	
+
 	parsedURL, err := url.Parse(rawURL)
 	if err != nil {
 		return issues
 	}
-	
+
 	hostname := parsedURL.Hostname()
-	
+
 	// Check for localhost and loopback addresses
 	if hostname == "localhost" || hostname == "127.0.0.1" || hostname == "::1" {
 		issues = append(issues, URLSecurityIssue{
@@ -51,7 +51,7 @@ func checkURLSecurity(rawURL string) []URLSecurityIssue {
 			URL:         rawURL,
 		})
 	}
-	
+
 	// Check for private IP ranges
 	if ip := net.ParseIP(hostname); ip != nil {
 		if isPrivateIP(ip) {
@@ -62,14 +62,14 @@ func checkURLSecurity(rawURL string) []URLSecurityIssue {
 			})
 		}
 	}
-	
+
 	// Check for cloud metadata endpoints
 	cloudMetadataHosts := []string{
-		"169.254.169.254",     // AWS/Azure metadata
+		"169.254.169.254",          // AWS/Azure metadata
 		"metadata.google.internal", // GCP metadata
-		"100.100.100.200",     // Alibaba Cloud metadata
+		"100.100.100.200",          // Alibaba Cloud metadata
 	}
-	
+
 	for _, metadataHost := range cloudMetadataHosts {
 		if hostname == metadataHost {
 			issues = append(issues, URLSecurityIssue{
@@ -80,7 +80,7 @@ func checkURLSecurity(rawURL string) []URLSecurityIssue {
 			break
 		}
 	}
-	
+
 	// Check for link-local addresses (169.254.x.x)
 	if ip := net.ParseIP(hostname); ip != nil {
 		if ip.IsLinkLocalUnicast() {
@@ -91,7 +91,7 @@ func checkURLSecurity(rawURL string) []URLSecurityIssue {
 			})
 		}
 	}
-	
+
 	return issues
 }
 
@@ -103,14 +103,14 @@ func isPrivateIP(ip net.IP) bool {
 		"172.16.0.0/12",
 		"192.168.0.0/16",
 	}
-	
+
 	for _, cidr := range private4Ranges {
 		_, network, _ := net.ParseCIDR(cidr)
 		if network.Contains(ip) {
 			return true
 		}
 	}
-	
+
 	// Private IPv6 ranges
 	if ip.To4() == nil { // IPv6
 		// fc00::/7 (unique local addresses)
@@ -119,7 +119,7 @@ func isPrivateIP(ip net.IP) bool {
 			return true
 		}
 	}
-	
+
 	return false
 }
 
@@ -128,12 +128,12 @@ func warnURLSecurity(rawURL string, urlType string, devMode bool) {
 	if devMode {
 		return
 	}
-	
+
 	issues := checkURLSecurity(rawURL)
 	if len(issues) == 0 {
 		return
 	}
-	
+
 	log.Printf("⚠️  SECURITY WARNING: %s URL has potential security concerns:", urlType)
 	for _, issue := range issues {
 		log.Printf("   - %s: %s", issue.Type, issue.Description)
@@ -168,4 +168,22 @@ func SaveMakeMCPAppToFile(app MakeMCPApp) error {
 	}
 	log.Printf("MakeMCPApp saved to %s\n", filename)
 	return nil
+}
+
+// MakeMCPAppFromFile loads a MakeMCPApp from a JSON file.
+func MakeMCPAppFromFile(filename string) (MakeMCPApp, error) {
+	var app MakeMCPApp
+	file, err := os.Open(filename)
+	if err != nil {
+		return app, fmt.Errorf("failed to open file: %w", err)
+	}
+	defer file.Close()
+
+	decoder := json.NewDecoder(file)
+	if err := decoder.Decode(&app); err != nil {
+		return app, fmt.Errorf("failed to decode JSON: %w", err)
+	}
+
+	log.Printf("MakeMCPApp loaded from %s\n", filename)
+	return app, nil
 }
