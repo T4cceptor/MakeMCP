@@ -138,6 +138,7 @@ type CLIParams struct {
 	Transport  TransportType
 	ConfigOnly bool
 	Port       string
+	DevMode    bool
 }
 
 // SplitParams groups all parameter maps by location for handler logic

@@ -48,27 +48,36 @@ func loadOpenAPISpec(openAPISpecLocation string) *openapi3.T {
 	log.Println("Loading OpenAPI spec from:", openAPISpecLocation)
 	loader := openapi3.NewLoader()
 	sourceType := detectSourceType(openAPISpecLocation)
+	
+	var doc *openapi3.T
+	var err error
+	
 	switch sourceType {
 	case "file":
-		doc, err := loader.LoadFromFile(openAPISpecLocation)
+		doc, err = loader.LoadFromFile(openAPISpecLocation)
 		if err != nil {
-			log.Fatal(err)
+			log.Fatalf("Failed to load OpenAPI spec from file: %v", err)
 		}
-		return doc
 	case "url":
 		u, err := url.Parse(openAPISpecLocation)
 		if err != nil {
-			log.Fatal(err)
+			log.Fatalf("Invalid URL format: %v", err)
 		}
-		doc, err := loader.LoadFromURI(u)
+		doc, err = loader.LoadFromURI(u)
 		if err != nil {
-			log.Fatal(err)
+			log.Fatalf("Failed to load OpenAPI spec from URL: %v", err)
 		}
-		return doc
 	default:
 		log.Fatalf("Unknown sourceType: %s (must be 'file' or 'url')", sourceType)
 		return nil
 	}
+	
+	// Validate that this is a proper OpenAPI specification using built-in validation
+	if err := doc.Validate(context.Background()); err != nil {
+		log.Fatalf("Invalid OpenAPI specification: %v", err)
+	}
+	
+	return doc
 }
 
 // detectSourceType determines whether the spec location is a URL or file path
@@ -566,6 +575,12 @@ func FromOpenAPISpecs(params CLIParams) MakeMCPApp {
 
 // HandleOpenAPI processes OpenAPI specifications and starts the MCP server
 func HandleOpenAPI(params CLIParams) {
+	// Check for security issues with URLs
+	if !params.DevMode {
+		warnURLSecurity(params.Specs, "OpenAPI spec", false)
+		warnURLSecurity(params.BaseURL, "Base URL", false)
+	}
+	
 	var app MakeMCPApp = FromOpenAPISpecs(params)
 
 	// We could also load a json file and create handler functions from it

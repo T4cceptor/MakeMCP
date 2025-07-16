@@ -15,7 +15,7 @@ func GetMCPServer(app MakeMCPApp) *server.MCPServer {
 	for i := range app.Tools {
 		tool := &(app.Tools[i])
 		mcp_server.AddTool(tool.Tool, tool.HandlerFunction)
-		log.Printf("Registered TOOL: %s with func: %#v", tool.Name, tool.HandlerFunction)
+		log.Printf("Registered TOOL: %s with func: %p", tool.Name, tool.HandlerFunction)
 	}
 	return mcp_server
 }

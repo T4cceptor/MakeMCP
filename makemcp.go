@@ -60,10 +60,10 @@ func main() {
 						Value: "8080",
 						Usage: "Defines the port on which the HTTP server is started, ignored if transport is set to stdio.",
 					},
-					&cli.StringFlag{
-						Name:  "port",
-						Value: "8080",
-						Usage: "Defines the port on which the HTTP server is started, ignored if transport is set to stdio.",
+					&cli.BoolFlag{
+						Name:  "dev-mode",
+						Value: false,
+						Usage: "Enable development mode - suppresses security warnings for local/private URLs. Use only for local development.",
 					},
 				},
 				Action: func(context context.Context, cmd *cli.Command) error {
@@ -74,6 +74,7 @@ func main() {
 						Transport:  TransportType(cmd.String("transport")),
 						ConfigOnly: cmd.Bool("config-only"),
 						Port:       cmd.String("port"),
+						DevMode:    cmd.Bool("dev-mode"),
 					}
 					HandleOpenAPI(params)
 					return nil
