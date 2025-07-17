@@ -1,4 +1,4 @@
-module makemcp
+module github.com/T4cceptor/MakeMCP
 
 go 1.24.1
 

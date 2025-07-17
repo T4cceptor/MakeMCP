@@ -1,24 +1,25 @@
-// Contains generic utils
-package main
+// Copyright 2025 MakeMCP Contributors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package openapi
 
 import (
-	"encoding/json"
-	"fmt"
 	"log"
 	"net"
-	"net/http"
 	"net/url"
-	"os"
 	"strings"
 )
-
-// boolPtr returns a pointer to the given bool value.
-// Useful for assigning *bool fields in structs.
-func boolPtr(val bool) *bool { return &val }
-
-// =============================================================================
-// URL SECURITY VALIDATION
-// =============================================================================
 
 // URLSecurityIssue represents a potential security concern with a URL
 type URLSecurityIssue struct {
@@ -27,8 +28,8 @@ type URLSecurityIssue struct {
 	URL         string
 }
 
-// checkURLSecurity analyzes a URL for potential security issues
-func checkURLSecurity(rawURL string) []URLSecurityIssue {
+// CheckURLSecurity analyzes a URL for potential security issues
+func CheckURLSecurity(rawURL string) []URLSecurityIssue {
 	var issues []URLSecurityIssue
 
 	// Skip file paths
@@ -123,13 +124,13 @@ func isPrivateIP(ip net.IP) bool {
 	return false
 }
 
-// warnURLSecurity logs security warnings for suspicious URLs
-func warnURLSecurity(rawURL string, urlType string, devMode bool) {
+// WarnURLSecurity logs security warnings for suspicious URLs
+func WarnURLSecurity(rawURL string, urlType string, devMode bool) {
 	if devMode {
 		return
 	}
 
-	issues := checkURLSecurity(rawURL)
+	issues := CheckURLSecurity(rawURL)
 	if len(issues) == 0 {
 		return
 	}
@@ -141,49 +142,4 @@ func warnURLSecurity(rawURL string, urlType string, devMode bool) {
 	log.Printf("   URL: %s", rawURL)
 	log.Printf("   To suppress these warnings for local development, use the --dev-mode flag")
 	log.Println()
-}
-
-// NewAPIClient creates a new APIClient with the given baseURL.
-func NewAPIClient(baseURL string) *APIClient {
-	return &APIClient{
-		BaseURL:    baseURL,
-		HTTPClient: &http.Client{},
-	}
-}
-
-// SaveMakeMCPAppToFile serializes the given MakeMCPApp as JSON and writes it to a file in the current directory.
-// The filename is derived from the MCP server name (e.g., "myserver.makemcp.json").
-func SaveMakeMCPAppToFile(app MakeMCPApp) error {
-	filename := fmt.Sprintf("%s.makemcp.json", app.Name)
-	file, err := os.Create(filename)
-	if err != nil {
-		return fmt.Errorf("failed to create file: %w", err)
-	}
-	defer file.Close()
-
-	encoder := json.NewEncoder(file)
-	encoder.SetIndent("", "  ")
-	if err := encoder.Encode(app); err != nil {
-		return fmt.Errorf("failed to encode JSON: %w", err)
-	}
-	log.Printf("MakeMCPApp saved to %s\n", filename)
-	return nil
-}
-
-// MakeMCPAppFromFile loads a MakeMCPApp from a JSON file.
-func MakeMCPAppFromFile(filename string) (MakeMCPApp, error) {
-	var app MakeMCPApp
-	file, err := os.Open(filename)
-	if err != nil {
-		return app, fmt.Errorf("failed to open file: %w", err)
-	}
-	defer file.Close()
-
-	decoder := json.NewDecoder(file)
-	if err := decoder.Decode(&app); err != nil {
-		return app, fmt.Errorf("failed to decode JSON: %w", err)
-	}
-
-	log.Printf("MakeMCPApp loaded from %s\n", filename)
-	return app, nil
 }
