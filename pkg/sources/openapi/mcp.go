@@ -23,7 +23,6 @@ import (
 
 	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/mark3labs/mcp-go/mcp"
-	"github.com/urfave/cli/v3"
 
 	"github.com/T4cceptor/MakeMCP/pkg/config"
 )
@@ -97,10 +96,10 @@ func (s *OpenAPISource) loadOpenAPISpec(openAPISpecLocation string) (*openapi3.T
 	log.Println("Loading OpenAPI spec from:", openAPISpecLocation)
 	loader := openapi3.NewLoader()
 	sourceType := s.detectSourceType(openAPISpecLocation)
-	
+
 	var doc *openapi3.T
 	var err error
-	
+
 	switch sourceType {
 	case "file":
 		doc, err = loader.LoadFromFile(openAPISpecLocation)
@@ -119,12 +118,12 @@ func (s *OpenAPISource) loadOpenAPISpec(openAPISpecLocation string) (*openapi3.T
 	default:
 		return nil, fmt.Errorf("unknown source type: %s", sourceType)
 	}
-	
+
 	// Validate the OpenAPI specification
 	if err := doc.Validate(context.Background()); err != nil {
 		return nil, fmt.Errorf("invalid OpenAPI specification: %w", err)
 	}
-	
+
 	return doc, nil
 }
 
@@ -182,14 +181,14 @@ func (s *OpenAPISource) getToolName(method string, path string, operation *opena
 	if toolName == "" {
 		toolName = fmt.Sprintf("%s_%s", method, path)
 	}
-	
+
 	// Clean up the tool name by removing invalid characters
 	toolName = strings.ReplaceAll(toolName, "{", "")
 	toolName = strings.ReplaceAll(toolName, "}", "")
 	toolName = strings.ReplaceAll(toolName, "/", "_")
 	toolName = strings.ReplaceAll(toolName, "-", "_")
 	toolName = strings.ToLower(toolName)
-	
+
 	return toolName
 }
 
@@ -276,7 +275,7 @@ func (s *OpenAPISource) getToolAnnotations(method string, path string, operation
 func (s *OpenAPISource) extractParametersByIn(operation *openapi3.Operation, in string) (map[string]config.ToolInputProperty, []string) {
 	props := make(map[string]config.ToolInputProperty)
 	var required []string
-	
+
 	// This is a simplified implementation - in a real implementation,
 	// you'd need to properly parse the OpenAPI parameter schemas
 	for _, param := range operation.Parameters {
@@ -291,14 +290,14 @@ func (s *OpenAPISource) extractParametersByIn(operation *openapi3.Operation, in 
 			}
 		}
 	}
-	
+
 	return props, required
 }
 
 func (s *OpenAPISource) extractRequestBodyProperties(operation *openapi3.Operation) (map[string]config.ToolInputProperty, []string) {
 	props := make(map[string]config.ToolInputProperty)
 	var required []string
-	
+
 	// This is a simplified implementation - in a real implementation,
 	// you'd need to properly parse the request body schema
 	if operation.RequestBody != nil && operation.RequestBody.Value != nil {
@@ -316,66 +315,6 @@ func (s *OpenAPISource) extractRequestBodyProperties(operation *openapi3.Operati
 			}
 		}
 	}
-	
+
 	return props, required
-}
-
-// GetCommand returns the CLI command for this source
-func (s *OpenAPISource) GetCommand() *cli.Command {
-	return &cli.Command{
-		Name:  "openapi",
-		Usage: "Use OpenAPI specifications to launch an MCP server locally.",
-		Flags: []cli.Flag{
-			&cli.StringFlag{
-				Name:    "specs",
-				Aliases: []string{"s"},
-				Value:   "",
-				Usage:   "Where to find the OpenAPI specification - can be either a properly formed URL, including protocol, or a file path to a JSON file.",
-			},
-			&cli.StringFlag{
-				Name:    "base-url",
-				Aliases: []string{"b"},
-				Value:   "",
-				Usage:   "Base URL of the OpenAPI specified API. This will be called when invoking the tools.",
-			},
-			&cli.StringFlag{
-				Name:    "transport",
-				Aliases: []string{"t"},
-				Value:   string(config.TransportTypeStdio),
-				Usage:   "Used transport protocol for this MCP server - can be either stdio or http.",
-			},
-			&cli.BoolFlag{
-				Name:    "config-only",
-				Aliases: []string{"oc"},
-				Value:   false,
-				Usage:   "If set to true only creates a config file and exits, no server will be started.",
-			},
-			&cli.StringFlag{
-				Name:  "port",
-				Value: "8080",
-				Usage: "Defines the port on which the HTTP server is started, ignored if transport is set to stdio.",
-			},
-			&cli.BoolFlag{
-				Name:  "dev-mode",
-				Value: false,
-				Usage: "Enable development mode - suppresses security warnings for local/private URLs. Use only for local development.",
-			},
-		},
-		Action: func(ctx context.Context, cmd *cli.Command) error {
-			params := config.CLIParams{
-				Specs:      cmd.String("specs"),
-				BaseURL:    cmd.String("base-url"),
-				Transport:  config.TransportType(cmd.String("transport")),
-				ConfigOnly: cmd.Bool("config-only"),
-				Port:       cmd.String("port"),
-				DevMode:    cmd.Bool("dev-mode"),
-			}
-			return HandleOpenAPI(params)
-		},
-	}
-}
-
-// boolPtr returns a pointer to the given bool value
-func boolPtr(val bool) *bool {
-	return &val
 }

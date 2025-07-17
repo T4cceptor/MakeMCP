@@ -17,19 +17,19 @@ package cli
 import (
 	"github.com/urfave/cli/v3"
 
-	"github.com/T4cceptor/MakeMCP/pkg/sources"
-	"github.com/T4cceptor/MakeMCP/pkg/sources/openapi"
-	"github.com/T4cceptor/MakeMCP/pkg/sources/file"
 	"github.com/T4cceptor/MakeMCP/pkg/processors"
 	"github.com/T4cceptor/MakeMCP/pkg/processors/auth"
+	"github.com/T4cceptor/MakeMCP/pkg/sources"
+	"github.com/T4cceptor/MakeMCP/pkg/sources/file"
+	"github.com/T4cceptor/MakeMCP/pkg/sources/openapi"
 )
 
 // InitializeRegistries initializes the global registries with default implementations
 func InitializeRegistries() {
 	// Register sources
-	sources.DefaultRegistry.Register(&openapi.OpenAPISource{})
-	sources.DefaultRegistry.Register(&file.FileSource{})
-	
+	sources.SourcesRegistry.Register(&openapi.OpenAPISource{})
+	sources.SourcesRegistry.Register(&file.FileSource{})
+
 	// Register processors
 	processors.DefaultRegistry.Register(&auth.APIKeyProcessor{})
 }
@@ -37,12 +37,11 @@ func InitializeRegistries() {
 // GetCommands returns all CLI commands by auto-discovering from source registry
 func GetCommands() []*cli.Command {
 	var commands []*cli.Command
-	
+
 	// Auto-discover commands from registered sources
-	for _, source := range sources.DefaultRegistry.GetAll() {
+	for _, source := range sources.SourcesRegistry.GetAll() {
 		commands = append(commands, source.GetCommand())
 	}
-	
+
 	return commands
 }
-

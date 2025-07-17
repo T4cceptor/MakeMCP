@@ -90,7 +90,7 @@ func TestOpenAPISource_Parse(t *testing.T) {
 		"getuserbyid",
 		"updateuser",
 		"deleteuser",
-		"get__users__userid__preferences", // This one doesn't have operationId
+		"get__users_userid_preferences", // This one doesn't have operationId
 	}
 
 	if len(app.Tools) != len(expectedTools) {

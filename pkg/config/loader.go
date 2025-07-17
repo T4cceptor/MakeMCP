@@ -18,13 +18,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"net/http"
 	"os"
 )
 
 // SaveToFile serializes the given MakeMCPApp as JSON and writes it to a file
 // The filename is derived from the MCP server name (e.g., "myserver.makemcp.json")
-func (app *MakeMCPApp) SaveToFile() error {
+func SaveToFile(app *MakeMCPApp) error {
 	filename := fmt.Sprintf("%s.makemcp.json", app.Name)
 	file, err := os.Create(filename)
 	if err != nil {
@@ -58,12 +57,4 @@ func LoadFromFile(filename string) (*MakeMCPApp, error) {
 
 	log.Printf("MakeMCPApp loaded from %s\n", filename)
 	return &app, nil
-}
-
-// NewAPIClient creates a new APIClient with the given baseURL
-func NewAPIClient(baseURL string) *APIClient {
-	return &APIClient{
-		BaseURL:    baseURL,
-		HTTPClient: &http.Client{},
-	}
 }

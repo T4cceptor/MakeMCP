@@ -16,7 +16,6 @@ package config
 
 import (
 	"context"
-	"net/http"
 
 	"github.com/mark3labs/mcp-go/mcp"
 )
@@ -28,12 +27,6 @@ const (
 	TransportTypeHTTP  TransportType = "http"
 	TransportTypeStdio TransportType = "stdio"
 )
-
-// APIClient struct to encapsulate baseURL and http.Client
-type APIClient struct {
-	BaseURL    string
-	HTTPClient *http.Client
-}
 
 // ProcessorStage defines when a processor should run
 type ProcessorStage string
@@ -146,55 +139,12 @@ type ToolInputProperty struct {
 	Location    string `json:"location"` // OpenAPI 'in' value: path, query, header, cookie, body, etc.
 }
 
-// SplitParams groups all parameter maps by location for handler logic
-type SplitParams struct {
-	Path   map[string]interface{} `json:"path"`
-	Query  map[string]interface{} `json:"query"`
-	Header map[string]interface{} `json:"header"`
-	Cookie map[string]interface{} `json:"cookie"`
-	Body   map[string]interface{} `json:"body"`
-}
-
-// NewSplitParams returns a SplitParams struct with all maps initialized
-func NewSplitParams() SplitParams {
-	return SplitParams{
-		Path:   map[string]interface{}{},
-		Query:  map[string]interface{}{},
-		Header: map[string]interface{}{},
-		Cookie: map[string]interface{}{},
-		Body:   map[string]interface{}{},
-	}
-}
-
-// AttachParams takes paramList and attaches values to the correct SplitParams fields
-func (params *SplitParams) AttachParams(paramList []map[string]interface{}) {
-	for _, param := range paramList {
-		name, _ := param["parameter_name"].(string)
-		value := param["parameter_value"]
-		location, _ := param["location"].(string)
-		switch location {
-		case "path":
-			params.Path[name] = value
-		case "query":
-			params.Query[name] = value
-		case "header":
-			params.Header[name] = value
-		case "cookie":
-			params.Cookie[name] = value
-		case "body":
-			params.Body[name] = value
-		default:
-			params.Query[name] = value // fallback
-		}
-	}
-}
-
 // CLIParams holds all CLI parameters for the makemcp commands
 type CLIParams struct {
-	Specs      string
-	BaseURL    string
-	Transport  TransportType
-	ConfigOnly bool
-	Port       string
-	DevMode    bool
+	Specs      string        // URL to OpenAPI specs
+	BaseURL    string        // Base URL of the API
+	Transport  TransportType // stdio or http
+	ConfigOnly bool          // if true, only creates config file
+	Port       string        // only valid with transport=http
+	DevMode    bool          // if true, disables security warnings
 }

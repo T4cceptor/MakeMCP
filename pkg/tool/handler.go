@@ -34,7 +34,7 @@ func NewHandler(tool *config.MakeMCPTool, globalProcessors []config.ProcessorCon
 	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		// Combine global and tool-specific processors
 		allProcessors := append(globalProcessors, tool.Processors...)
-		
+
 		// Create processor data
 		data := &processors.ProcessorData{
 			Request:  &request,
@@ -100,10 +100,10 @@ func handleOpenAPITool(ctx context.Context, tool *config.MakeMCPTool, request mc
 	// 5. Return the result
 
 	// For now, return a simple response
-	content := fmt.Sprintf("OpenAPI tool %s (%s %s) would be executed with arguments: %v", 
-		tool.Name, 
-		tool.OpenAPIHandlerInput.Method, 
-		tool.OpenAPIHandlerInput.Path, 
+	content := fmt.Sprintf("OpenAPI tool %s (%s %s) would be executed with arguments: %v",
+		tool.Name,
+		tool.OpenAPIHandlerInput.Method,
+		tool.OpenAPIHandlerInput.Path,
 		request.Params.Arguments)
 
 	return &mcp.CallToolResult{

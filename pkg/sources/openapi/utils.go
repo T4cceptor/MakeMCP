@@ -17,9 +17,29 @@ package openapi
 import (
 	"log"
 	"net"
+	"net/http"
 	"net/url"
 	"strings"
 )
+
+// APIClient struct to encapsulate baseURL and http.Client
+type APIClient struct {
+	BaseURL    string
+	HTTPClient *http.Client
+}
+
+// NewAPIClient creates a new APIClient with the given baseURL
+func NewAPIClient(baseURL string) *APIClient {
+	return &APIClient{
+		BaseURL:    baseURL,
+		HTTPClient: &http.Client{},
+	}
+}
+
+// boolPtr returns a pointer to the given bool value
+func boolPtr(val bool) *bool {
+	return &val
+}
 
 // URLSecurityIssue represents a potential security concern with a URL
 type URLSecurityIssue struct {

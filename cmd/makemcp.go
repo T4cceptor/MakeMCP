@@ -21,7 +21,7 @@ import (
 
 	"github.com/urfave/cli/v3"
 
-	commands "github.com/T4cceptor/MakeMCP/internal/cli"
+	commands "github.com/T4cceptor/MakeMCP/internal"
 )
 
 // version is set by build flags during release
@@ -29,6 +29,7 @@ var version = "dev"
 
 func main() {
 	// Initialize registries
+	// Todo: refactor this to be in the /sources folder to keep responsibilities seperate
 	commands.InitializeRegistries()
 
 	// Create CLI app
