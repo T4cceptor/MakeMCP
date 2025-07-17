@@ -16,14 +16,36 @@ MakeMCP is a simple CLI tool that converts OpenAPI specifications into MCP (Mode
 
 ### Install
 
-**From source (current):**
+### Download Binary (Recommended)
+
+Download the latest binary for your platform from [GitHub Releases](https://github.com/T4cceptor/MakeMCP/releases):
+
 ```bash
-git clone https://github.com/your-org/makemcp
-cd makemcp
+# Linux/macOS - automatic download and install
+curl -sSL https://raw.githubusercontent.com/T4cceptor/MakeMCP/main/install.sh | bash
+
+# Manual download
+# Visit https://github.com/T4cceptor/MakeMCP/releases
+# Download the appropriate archive for your platform
+# Extract and move the binary to your PATH
+```
+
+### Go Install
+
+```bash
+go install github.com/T4cceptor/MakeMCP@latest
+```
+
+### Build from Source
+
+```bash
+git clone https://github.com/T4cceptor/MakeMCP
+cd MakeMCP
 go build -o makemcp .
 ```
 
-**Package managers (coming soon):**
+### Package Managers (Coming Soon)
+
 ```bash
 # macOS/Linux
 brew install makemcp
@@ -111,6 +133,14 @@ makemcp openapi -s "http://localhost:8081/openapi.json" -b "http://localhost:808
 - `-t, --transport <stdio|http>` - Transport protocol (default: stdio)
 - `--config-only` - Generate configuration file only, don't start server
 - `--port <port>` - Port for HTTP transport (default: 8080)
+- `--dev-mode` - Enable development mode (suppresses security warnings)
+- `-h, --help` - Show help
+
+**`makemcp file <config-file>`** - Load MakeMCP configuration and start server
+
+**Options:**
+- `-t, --transport <stdio|http>` - Override transport protocol from config
+- `--port <port>` - Override port from config
 - `-h, --help` - Show help
 
 **Examples:**
@@ -123,6 +153,12 @@ makemcp openapi -s "./spec.json" -b "http://localhost:3000" -t http --port 9000
 
 # Configuration only
 makemcp openapi -s "http://api.example.com/openapi.json" -b "http://api.example.com" --config-only
+
+# Load and run from saved configuration
+makemcp file my-api-server.makemcp.json
+
+# Load configuration with overrides
+makemcp file my-api-server.makemcp.json --transport http --port 9090
 ```
 
 ### Global Options

@@ -23,10 +23,14 @@ import (
 	"github.com/urfave/cli/v3"
 )
 
+// version is set by build flags during release
+var version = "dev"
+
 func main() {
 	app := &cli.Command{
-		Name:  "makemcp",
-		Usage: "Create an MCP server out of anything.",
+		Name:    "makemcp",
+		Usage:   "Create an MCP server out of anything.",
+		Version: version,
 		Commands: []*cli.Command{
 			{
 				Name:  "openapi",
