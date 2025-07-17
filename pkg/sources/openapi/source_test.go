@@ -427,19 +427,6 @@ func TestOpenAPISource_DetectSourceType(t *testing.T) {
 	}
 }
 
-func TestOpenAPISource_GetDefaultConfig(t *testing.T) {
-	source := &OpenAPISource{}
-
-	config := source.GetDefaultConfig()
-
-	if config["spec"] != "" {
-		t.Errorf("Expected empty spec, got %v", config["spec"])
-	}
-	if config["baseUrl"] != "" {
-		t.Errorf("Expected empty baseUrl, got %v", config["baseUrl"])
-	}
-}
-
 func TestOpenAPISource_Name(t *testing.T) {
 	source := &OpenAPISource{}
 

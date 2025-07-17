@@ -44,13 +44,6 @@ func (s *FileSource) Validate(input string) error {
 	return err
 }
 
-// GetDefaultConfig returns the default configuration for file sources
-func (s *FileSource) GetDefaultConfig() map[string]interface{} {
-	return map[string]interface{}{
-		"path": "",
-	}
-}
-
 // GetCommand returns the CLI command for this source
 func (s *FileSource) GetCommand() *cli.Command {
 	return &cli.Command{
@@ -75,11 +68,11 @@ func (s *FileSource) GetCommand() *cli.Command {
 			if args.Len() == 0 {
 				return fmt.Errorf("config file path is required")
 			}
-			
+
 			configPath := args.First()
 			transportOverride := cmd.String("transport")
 			portOverride := cmd.String("port")
-			
+
 			return HandleFile(configPath, transportOverride, portOverride)
 		},
 	}

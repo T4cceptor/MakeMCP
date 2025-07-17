@@ -36,15 +36,20 @@ func (s *OpenAPISource) Name() string {
 }
 
 // Parse converts an OpenAPI specification into a MakeMCPApp configuration
-func (s *OpenAPISource) Parse(input string, baseConfig config.MakeMCPApp) (*config.MakeMCPApp, error) {
+func (s *OpenAPISource) Parse(params config.CLIParams) (*config.MakeMCPApp, error) {
+	app := config.NewMakeMCPApp(
+		"",
+		"",
+		params.Transport,
+	)
+
 	// Load the OpenAPI specification
-	doc, err := s.loadOpenAPISpec(input)
+	doc, err := s.loadOpenAPISpec(params.Specs)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load OpenAPI spec: %w", err)
 	}
 
 	// Create the app configuration
-	app := baseConfig
 	if app.Name == "" {
 		app.Name = doc.Info.Title
 	}
@@ -81,14 +86,6 @@ func (s *OpenAPISource) Parse(input string, baseConfig config.MakeMCPApp) (*conf
 func (s *OpenAPISource) Validate(input string) error {
 	_, err := s.loadOpenAPISpec(input)
 	return err
-}
-
-// GetDefaultConfig returns the default configuration for OpenAPI sources
-func (s *OpenAPISource) GetDefaultConfig() map[string]interface{} {
-	return map[string]interface{}{
-		"spec":    "",
-		"baseUrl": "",
-	}
 }
 
 // loadOpenAPISpec loads an OpenAPI specification from a URL or local file path
@@ -318,3 +315,5 @@ func (s *OpenAPISource) extractRequestBodyProperties(operation *openapi3.Operati
 
 	return props, required
 }
+
+// TODO: add AttachHandlers function -> creating the actual tool handlers

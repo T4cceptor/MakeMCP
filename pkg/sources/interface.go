@@ -38,9 +38,6 @@ type Source interface {
 	// Validate checks if the input is valid for this source type
 	Validate(input string) error
 
-	// GetDefaultConfig returns default configuration for this source
-	GetDefaultConfig() map[string]interface{}
-
 	// GetCommand returns the CLI command for this source
 	GetCommand() *cli.Command
 }
