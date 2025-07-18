@@ -1,0 +1,242 @@
+{
+  "name": "FastAPI",
+  "version": "0.1.0",
+  "tools": [
+    {
+      "oapiHandlerInput": {
+        "method": "GET",
+        "path": "/",
+        "headers": {},
+        "cookies": {},
+        "bodyAppend": {}
+      },
+      "toolSource": {
+        "uri": "{\"transport\":\"stdio\",\"configOnly\":false,\"port\":\"8080\",\"devMode\":false,\"type\":\"openapi\",\"flags\":{\"base-url\":\"http://localhost:8081\",\"help\":false,\"specs\":\"http://localhost:8081/openapi.json\"},\"args\":[]}",
+        "data": "R0VUIC8="
+      },
+      "name": "read_root__get",
+      "description": "Root endpoint.\nReturns a welcome message from the FastAPI server.",
+      "inputSchema": {
+        "type": "object"
+      },
+      "annotations": {
+        "title": "read_root__get",
+        "readOnlyHint": true,
+        "idempotentHint": true
+      }
+    },
+    {
+      "oapiHandlerInput": {
+        "method": "GET",
+        "path": "/users",
+        "headers": {},
+        "cookies": {},
+        "bodyAppend": {}
+      },
+      "toolSource": {
+        "uri": "{\"transport\":\"stdio\",\"configOnly\":false,\"port\":\"8080\",\"devMode\":false,\"type\":\"openapi\",\"flags\":{\"base-url\":\"http://localhost:8081\",\"help\":false,\"specs\":\"http://localhost:8081/openapi.json\"},\"args\":[]}",
+        "data": "R0VUIC91c2Vycw=="
+      },
+      "name": "list_users_users_get",
+      "description": "Retrieve a list of all users in the database.\nReturns:\n    List[User]: A list of user objects.",
+      "inputSchema": {
+        "type": "object"
+      },
+      "annotations": {
+        "title": "list_users_users_get",
+        "readOnlyHint": true,
+        "idempotentHint": true
+      }
+    },
+    {
+      "oapiHandlerInput": {
+        "method": "POST",
+        "path": "/users",
+        "headers": {},
+        "cookies": {},
+        "bodyAppend": {}
+      },
+      "toolSource": {
+        "uri": "{\"transport\":\"stdio\",\"configOnly\":false,\"port\":\"8080\",\"devMode\":false,\"type\":\"openapi\",\"flags\":{\"base-url\":\"http://localhost:8081\",\"help\":false,\"specs\":\"http://localhost:8081/openapi.json\"},\"args\":[]}",
+        "data": "UE9TVCAvdXNlcnM="
+      },
+      "name": "create_user_users_post",
+      "description": "Create a new user in the database.\nArgs:\n    user (User): The user object to create.\nReturns:\n    User: The created user object.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "body__created_date": {
+            "description": "",
+            "type": "string"
+          },
+          "body__email": {
+            "description": "",
+            "type": "string"
+          },
+          "body__id": {
+            "description": "",
+            "type": "string"
+          },
+          "body__name": {
+            "description": "",
+            "type": "string"
+          }
+        },
+        "required": [
+          "body__email",
+          "body__name"
+        ]
+      },
+      "annotations": {
+        "title": "create_user_users_post",
+        "idempotentHint": false
+      }
+    },
+    {
+      "oapiHandlerInput": {
+        "method": "GET",
+        "path": "/users/by_email/",
+        "headers": {},
+        "cookies": {},
+        "bodyAppend": {}
+      },
+      "toolSource": {
+        "uri": "{\"transport\":\"stdio\",\"configOnly\":false,\"port\":\"8080\",\"devMode\":false,\"type\":\"openapi\",\"flags\":{\"base-url\":\"http://localhost:8081\",\"help\":false,\"specs\":\"http://localhost:8081/openapi.json\"},\"args\":[]}",
+        "data": "R0VUIC91c2Vycy9ieV9lbWFpbC8="
+      },
+      "name": "get_user_by_email_users_by_email__get",
+      "description": "Retrieve a user by their email address.\nArgs:\n    email (str): The email address to search for.\nReturns:\n    User: The user object if found.\nRaises:\n    HTTPException: If the user is not found.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "query__email": {
+            "description": "",
+            "type": "string"
+          }
+        },
+        "required": [
+          "query__email"
+        ]
+      },
+      "annotations": {
+        "title": "get_user_by_email_users_by_email__get",
+        "readOnlyHint": true,
+        "idempotentHint": true
+      }
+    },
+    {
+      "oapiHandlerInput": {
+        "method": "DELETE",
+        "path": "/users/{user_id}",
+        "headers": {},
+        "cookies": {},
+        "bodyAppend": {}
+      },
+      "toolSource": {
+        "uri": "{\"transport\":\"stdio\",\"configOnly\":false,\"port\":\"8080\",\"devMode\":false,\"type\":\"openapi\",\"flags\":{\"base-url\":\"http://localhost:8081\",\"help\":false,\"specs\":\"http://localhost:8081/openapi.json\"},\"args\":[]}",
+        "data": "REVMRVRFIC91c2Vycy97dXNlcl9pZH0="
+      },
+      "name": "delete_user_users__user_id__delete",
+      "description": "Delete a user by their unique ID.\nArgs:\n    user_id (int): The ID of the user to delete.\nReturns:\n    dict: A confirmation message if deletion is successful.\nRaises:\n    HTTPException: If the user is not found.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "path__user_id": {
+            "description": "",
+            "type": "string"
+          }
+        },
+        "required": [
+          "path__user_id"
+        ]
+      },
+      "annotations": {
+        "title": "delete_user_users__user_id__delete",
+        "destructiveHint": true
+      }
+    },
+    {
+      "oapiHandlerInput": {
+        "method": "GET",
+        "path": "/users/{user_id}",
+        "headers": {},
+        "cookies": {},
+        "bodyAppend": {}
+      },
+      "toolSource": {
+        "uri": "{\"transport\":\"stdio\",\"configOnly\":false,\"port\":\"8080\",\"devMode\":false,\"type\":\"openapi\",\"flags\":{\"base-url\":\"http://localhost:8081\",\"help\":false,\"specs\":\"http://localhost:8081/openapi.json\"},\"args\":[]}",
+        "data": "R0VUIC91c2Vycy97dXNlcl9pZH0="
+      },
+      "name": "get_user_by_id_users__user_id__get",
+      "description": "Retrieve a user by their unique ID.\nArgs:\n    user_id (int): The ID of the user to retrieve.\nReturns:\n    User: The user object if found.\nRaises:\n    HTTPException: If the user is not found.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "path__user_id": {
+            "description": "",
+            "type": "string"
+          }
+        },
+        "required": [
+          "path__user_id"
+        ]
+      },
+      "annotations": {
+        "title": "get_user_by_id_users__user_id__get",
+        "readOnlyHint": true,
+        "idempotentHint": true
+      }
+    },
+    {
+      "oapiHandlerInput": {
+        "method": "PATCH",
+        "path": "/users/{user_id}",
+        "headers": {},
+        "cookies": {},
+        "bodyAppend": {}
+      },
+      "toolSource": {
+        "uri": "{\"transport\":\"stdio\",\"configOnly\":false,\"port\":\"8080\",\"devMode\":false,\"type\":\"openapi\",\"flags\":{\"base-url\":\"http://localhost:8081\",\"help\":false,\"specs\":\"http://localhost:8081/openapi.json\"},\"args\":[]}",
+        "data": "UEFUQ0ggL3VzZXJzL3t1c2VyX2lkfQ=="
+      },
+      "name": "update_user_users__user_id__patch",
+      "description": "Update a user's name and/or email by their ID.\nArgs:\n    user_id (int): The ID of the user to update.\n    name (str, optional): The new name for the user.\n    email (str, optional): The new email for the user.\nReturns:\n    User: The updated user object.\nRaises:\n    HTTPException: If the user is not found.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "path__user_id": {
+            "description": "",
+            "type": "string"
+          },
+          "query__email": {
+            "description": "",
+            "type": "string"
+          },
+          "query__name": {
+            "description": "",
+            "type": "string"
+          }
+        },
+        "required": [
+          "path__user_id"
+        ]
+      },
+      "annotations": {
+        "title": "update_user_users__user_id__patch"
+      }
+    }
+  ],
+  "config": {
+    "transport": "stdio",
+    "configOnly": false,
+    "port": "8080",
+    "devMode": false,
+    "type": "openapi",
+    "flags": {
+      "base-url": "http://localhost:8081",
+      "help": false,
+      "specs": "http://localhost:8081/openapi.json"
+    },
+    "args": []
+  }
+}

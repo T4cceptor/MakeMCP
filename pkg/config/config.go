@@ -16,6 +16,7 @@ package config
 
 import (
 	"context"
+	"encoding/json"
 
 	"github.com/mark3labs/mcp-go/mcp"
 )
@@ -28,30 +29,40 @@ const (
 	TransportTypeStdio TransportType = "stdio"
 )
 
-// ProcessorStage defines when a processor should run
-type ProcessorStage string
-
-const (
-	StagePreRequest   ProcessorStage = "pre-request"
-	StagePostRequest  ProcessorStage = "post-request"
-	StagePreResponse  ProcessorStage = "pre-response"
-	StagePostResponse ProcessorStage = "post-response"
-)
-
-// ProcessorConfig defines configuration for a processor
-type ProcessorConfig struct {
-	Name   string                 `json:"name"`
-	Stage  ProcessorStage         `json:"stage"`
-	Config map[string]interface{} `json:"config"`
+// MCP objects
+type McpToolInputSchema struct {
+	Type       string         `json:"type"`
+	Properties map[string]any `json:"properties,omitempty"`
+	Required   []string       `json:"required,omitempty"`
 }
 
-// SourceConfig defines configuration for a source
-type SourceConfig struct {
-	Type   string                 `json:"type"`
-	Config map[string]interface{} `json:"config"`
+type McpToolAnnotation struct {
+	// Human-readable title for the tool
+	Title string `json:"title,omitempty"`
+	// If true, the tool does not modify its environment
+	ReadOnlyHint *bool `json:"readOnlyHint,omitempty"`
+	// If true, the tool may perform destructive updates
+	DestructiveHint *bool `json:"destructiveHint,omitempty"`
+	// If true, repeated calls with same args have no additional effect
+	IdempotentHint *bool `json:"idempotentHint,omitempty"`
+	// If true, tool interacts with external entities
+	OpenWorldHint *bool `json:"openWorldHint,omitempty"`
 }
 
-// MakeMCPTool extends mcp.Tool with additional MakeMCP information
+type McpTool struct {
+	// The name of the tool.
+	Name string `json:"name"`
+	// A human-readable description of the tool.
+	Description string `json:"description,omitempty"`
+	// A JSON Schema object defining the expected parameters for the tool.
+	InputSchema McpToolInputSchema `json:"inputSchema"`
+	// Alternative to InputSchema - allows arbitrary JSON Schema to be provided
+	RawInputSchema json.RawMessage `json:"-"` // Hide this from JSON marshaling
+	// Optional properties describing tool behavior
+	Annotations McpToolAnnotation `json:"annotations"`
+}
+
+// MakeMCPTool extends McpTool with additional MakeMCP information
 type MakeMCPTool struct {
 	// HandlerInput will be provided to tool handler function as-is
 	HandlerInput        map[string]any       `json:"handlerInput,omitempty"`
@@ -61,18 +72,14 @@ type MakeMCPTool struct {
 	HandlerFunction func(
 		ctx context.Context,
 		request mcp.CallToolRequest,
+		// TODO: refactor to get rid of mcp dependency
 	) (*mcp.CallToolResult, error) `json:"-"`
 
-	// Processors defines processors applied to each result in order
-	Processors []ProcessorConfig `json:"processors,omitempty"`
-
-	// ToolSource holds the original data provided when creating the config
-	ToolSource ToolSource `json:"toolSource"`
-
-	mcp.Tool
+	McpTool
 }
 
 // OpenAPIHandlerInput defines how a particular endpoint is to be called
+// TODO: move into OpenAPI source folder
 type OpenAPIHandlerInput struct {
 	Method     string            `json:"method"`
 	Path       string            `json:"path"`
@@ -92,59 +99,46 @@ func NewOpenAPIHandlerInput(method, path string) OpenAPIHandlerInput {
 	}
 }
 
-// ToolSource contains source information for a tool
-type ToolSource struct {
-	URI  string `json:"uri"`  // source of the tool handler data
-	Data []byte `json:"data"` // actual input data used to create the MakeMCP config
-}
-
-// OpenAPIConfig holds OpenAPI-specific configuration
-type OpenAPIConfig struct {
-	BaseURL string `json:"baseUrl"`
-}
-
 // MakeMCPApp holds all information about the MCP server
+// Main data structure
 type MakeMCPApp struct {
-	Name      string        `json:"name"`
-	Version   string        `json:"version"`
-	Tools     []MakeMCPTool `json:"tools"`
-	Transport string        `json:"transport"`
-	Port      *string       `json:"port,omitempty"`
-
-	// Source configuration
-	Source SourceConfig `json:"source"`
-
-	// Global processors (applied to all tools)
-	Processors []ProcessorConfig `json:"processors,omitempty"`
-
-	// Legacy OpenAPI config (for backward compatibility)
-	OpenAPIConfig *OpenAPIConfig `json:"openapiConfig,omitempty"`
+	Name    string        `json:"name"`    // Name of the App
+	Version string        `json:"version"` // Version of the app
+	Tools   []MakeMCPTool `json:"tools"`   // Tools the MCP server will provide
+	Config  Config        `json:"config"`
 }
 
 // NewMakeMCPApp creates a new MakeMCPApp with default values
 func NewMakeMCPApp(name, version string, transport TransportType) MakeMCPApp {
 	return MakeMCPApp{
-		Name:      name,
-		Version:   version,
-		Tools:     []MakeMCPTool{},
-		Transport: string(transport),
-		Port:      nil,
+		Name:    name,
+		Version: version,
+		Tools:   []MakeMCPTool{},
+		Config: Config{
+			Transport: transport,
+		},
 	}
 }
 
-// ToolInputProperty defines a property in the input schema for an MCP tool
-type ToolInputProperty struct {
-	Type        string `json:"type"`
-	Description string `json:"description,omitempty"`
-	Location    string `json:"location"` // OpenAPI 'in' value: path, query, header, cookie, body, etc.
+// Config holds all CLI parameters for the makemcp commands
+type Config struct {
+	// Generic MCP server parameters
+	Transport  TransportType `json:"transport"`  // stdio or http
+	ConfigOnly bool          `json:"configOnly"` // if true, only creates config file
+	Port       string        `json:"port"`       // only valid with transport=http
+	DevMode    bool          `json:"devMode"`    // true if running in development mode - related to security checks
+
+	// Source-specific parameters
+	SourceType string         `json:"type"`  // type of source (openapi, cli, etc.)
+	CliFlags   map[string]any `json:"flags"` // source-specific configuration
+	CliArgs    []string       `json:"args"`
 }
 
-// CLIParams holds all CLI parameters for the makemcp commands
-type CLIParams struct {
-	Specs      string        // URL to OpenAPI specs
-	BaseURL    string        // Base URL of the API
-	Transport  TransportType // stdio or http
-	ConfigOnly bool          // if true, only creates config file
-	Port       string        // only valid with transport=http
-	DevMode    bool          // if true, disables security warnings
+// ToJSON returns a JSON representation of the CLIParams for logging and debugging
+func (c Config) ToJSON() string {
+	jsonBytes, err := json.Marshal(c)
+	if err != nil {
+		return `{"error": "failed to marshal CLIParams to JSON"}`
+	}
+	return string(jsonBytes)
 }

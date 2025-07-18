@@ -21,7 +21,7 @@ import (
 
 	"github.com/urfave/cli/v3"
 
-	commands "github.com/T4cceptor/MakeMCP/internal"
+	internal "github.com/T4cceptor/MakeMCP/internal"
 )
 
 // version is set by build flags during release
@@ -30,14 +30,14 @@ var version = "dev"
 func main() {
 	// Initialize registries
 	// Todo: refactor this to be in the /sources folder to keep responsibilities seperate
-	commands.InitializeRegistries()
+	internal.InitializeRegistries()
 
 	// Create CLI app
 	app := &cli.Command{
 		Name:     "makemcp",
 		Usage:    "Create an MCP server out of anything.",
 		Version:  version,
-		Commands: commands.GetCommands(),
+		Commands: internal.GetCommands(),
 	}
 
 	// Run the CLI app

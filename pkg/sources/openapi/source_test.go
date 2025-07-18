@@ -28,7 +28,7 @@ func TestOpenAPISource_LoadSpec(t *testing.T) {
 	// Test only the valid case since loadOpenAPISpec calls log.Fatalf on error
 	// which would exit the test process
 	t.Run("Valid OpenAPI spec file", func(t *testing.T) {
-		doc, err := source.loadOpenAPISpec("../../../testdata/sample_openapi.json")
+		doc, err := source.loadOpenAPISpec("../../../testdata/sample_openapi.json", false)
 		if err != nil {
 			t.Fatalf("Expected no error but got: %v", err)
 		}
@@ -61,13 +61,13 @@ func TestOpenAPISource_LoadSpec(t *testing.T) {
 
 func TestOpenAPISource_Parse(t *testing.T) {
 	source := &OpenAPISource{}
-	baseConfig := config.MakeMCPApp{
-		Name:      "Test App",
-		Version:   "1.0.0",
-		Transport: "stdio",
+	params := config.Config{
+		CliFlags: map[string]any{
+			"specs": "../../../testdata/sample_openapi.json",
+		},
 	}
 
-	app, err := source.Parse("../../../testdata/sample_openapi.json", baseConfig)
+	app, err := source.Parse(&params)
 	if err != nil {
 		t.Fatalf("Expected no error but got: %v", err)
 	}
@@ -79,8 +79,8 @@ func TestOpenAPISource_Parse(t *testing.T) {
 	if app.Version == "" {
 		t.Error("Expected non-empty app version")
 	}
-	if app.Source.Type != "openapi" {
-		t.Errorf("Expected source type 'openapi', got %s", app.Source.Type)
+	if app.Config.SourceType != "openapi" {
+		t.Errorf("Expected source type 'openapi', got %s", app.Config.SourceType)
 	}
 
 	// Test tools generation
@@ -367,24 +367,6 @@ func TestOpenAPISource_GetToolAnnotations(t *testing.T) {
 			}
 		})
 	}
-}
-
-func TestOpenAPISource_Validate(t *testing.T) {
-	source := &OpenAPISource{}
-
-	t.Run("Valid OpenAPI spec", func(t *testing.T) {
-		err := source.Validate("../../../testdata/sample_openapi.json")
-		if err != nil {
-			t.Errorf("Expected no error for valid spec, got: %v", err)
-		}
-	})
-
-	t.Run("Invalid file path", func(t *testing.T) {
-		err := source.Validate("nonexistent.json")
-		if err == nil {
-			t.Error("Expected error for nonexistent file")
-		}
-	})
 }
 
 func TestOpenAPISource_DetectSourceType(t *testing.T) {

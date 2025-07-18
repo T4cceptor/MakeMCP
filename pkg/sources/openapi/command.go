@@ -15,13 +15,6 @@
 package openapi
 
 import (
-	"context"
-	"fmt"
-	"log"
-
-	config "github.com/T4cceptor/MakeMCP/pkg/config"
-	"github.com/T4cceptor/MakeMCP/pkg/server"
-	sources "github.com/T4cceptor/MakeMCP/pkg/sources"
 	"github.com/urfave/cli/v3"
 )
 
@@ -43,90 +36,6 @@ func (s *OpenAPISource) GetCommand() *cli.Command {
 				Value:   "",
 				Usage:   "Base URL of the OpenAPI specified API. This will be called when invoking the tools.",
 			},
-			&cli.StringFlag{
-				Name:    "transport",
-				Aliases: []string{"t"},
-				Value:   string(config.TransportTypeStdio),
-				Usage:   "Used transport protocol for this MCP server - can be either stdio or http.",
-			},
-			&cli.BoolFlag{
-				Name:    "config-only",
-				Aliases: []string{"oc"},
-				Value:   false,
-				Usage:   "If set to true only creates a config file and exits, no server will be started.",
-			},
-			&cli.StringFlag{
-				Name:  "port",
-				Value: "8080",
-				Usage: "Defines the port on which the HTTP server is started, ignored if transport is set to stdio.",
-			},
-			&cli.BoolFlag{
-				Name:  "dev-mode",
-				Value: false,
-				Usage: "Enable development mode - suppresses security warnings for local/private URLs. Use only for local development.",
-			},
-		},
-		Action: func(ctx context.Context, cmd *cli.Command) error {
-			params := config.CLIParams{
-				Specs:      cmd.String("specs"),
-				BaseURL:    cmd.String("base-url"),
-				Transport:  config.TransportType(cmd.String("transport")),
-				ConfigOnly: cmd.Bool("config-only"),
-				Port:       cmd.String("port"),
-				DevMode:    cmd.Bool("dev-mode"),
-			}
-			return sources.HandleInput(
-				GetOpenAPISource(),
-				params,
-			)
 		},
 	}
-}
-
-func GetOpenAPISource() OpenAPISource {
-	return OpenAPISource{}
-}
-
-// HandleOpenAPI handles the OpenAPI command
-func HandleOpenAPI(params config.CLIParams) error {
-	log.Println("Creating config from OpenAPI specification")
-
-	// Security checks
-	if !params.DevMode {
-		WarnURLSecurity(params.Specs, "OpenAPI spec", false)
-		WarnURLSecurity(params.BaseURL, "Base URL", false)
-	}
-
-	// Create base configuration
-	baseConfig := config.NewMakeMCPApp("", "", params.Transport)
-	if params.Port != "" {
-		baseConfig.Port = &params.Port
-	}
-
-	// Parse with OpenAPI source
-	source := &OpenAPISource{}
-	app, err := source.Parse(params.Specs, baseConfig)
-	if err != nil {
-		return fmt.Errorf("failed to parse OpenAPI specification: %w", err)
-	}
-
-	// Set OpenAPI config for backward compatibility
-	app.OpenAPIConfig = &config.OpenAPIConfig{
-		BaseURL: params.BaseURL,
-	}
-
-	// Save configuration
-	if err := config.SaveToFile(app); err != nil {
-		return fmt.Errorf("failed to save configuration: %w", err)
-	}
-
-	// Exit if config-only mode
-	if params.ConfigOnly {
-		log.Println("Configuration file created. Exiting.")
-		return nil
-	}
-
-	// Start server
-	mcpServer := server.NewMCPServer(app)
-	return mcpServer.Start(params.Transport, params.Port)
 }

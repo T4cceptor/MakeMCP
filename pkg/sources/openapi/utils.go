@@ -15,6 +15,7 @@
 package openapi
 
 import (
+	"fmt"
 	"log"
 	"net"
 	"net/http"
@@ -162,4 +163,48 @@ func WarnURLSecurity(rawURL string, urlType string, devMode bool) {
 	log.Printf("   URL: %s", rawURL)
 	log.Printf("   To suppress these warnings for local development, use the --dev-mode flag")
 	log.Println()
+}
+
+// substitutePathParams replaces path parameters in URL template
+func substitutePathParams(path string, pathParams map[string]any) string {
+	for k, v := range pathParams {
+		placeholder := fmt.Sprintf("{%s}", k)
+		path = strings.ReplaceAll(path, placeholder, fmt.Sprintf("%v", v))
+	}
+	return path
+}
+
+// encodeQueryParams encodes query parameters for URL
+func encodeQueryParams(queryParams map[string]any) string {
+	values := url.Values{}
+	for k, v := range queryParams {
+		values.Set(k, fmt.Sprintf("%v", v))
+	}
+	return values.Encode()
+}
+
+// parsePrefixedParameters parses parameters using prefix approach and returns SplitParams
+func parsePrefixedParameters(argsRaw map[string]any) SplitParams {
+	params := NewSplitParams()
+	for prefixedName, value := range argsRaw {
+		parts := strings.SplitN(prefixedName, "__", 2)
+		if len(parts) != 2 {
+			continue
+		}
+		location, paramName := parts[0], parts[1]
+
+		switch location {
+		case "path":
+			params.Path[paramName] = value
+		case "query":
+			params.Query[paramName] = value
+		case "header":
+			params.Header[paramName] = value
+		case "cookie":
+			params.Cookie[paramName] = value
+		case "body":
+			params.Body[paramName] = value
+		}
+	}
+	return params
 }

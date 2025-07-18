@@ -14,10 +14,45 @@
 
 package sources
 
+import (
+	"fmt"
+
+	"github.com/T4cceptor/MakeMCP/pkg/config"
+	"github.com/T4cceptor/MakeMCP/pkg/sources/openapi"
+)
+
 // SourcesRegistry is the global source registry
-var SourcesRegistry *SourceRegistry = NewSourceRegistry()
+var SourcesRegistry *SourceRegistry = &SourceRegistry{}
 
 func InitializeSources() *SourceRegistry {
-	// TODO: implement code to register all available sources
+	// Register all available sources
+	SourcesRegistry.Register(&openapi.OpenAPISource{})
 	return SourcesRegistry
+}
+
+// SourceRegistry manages available sources
+type SourceRegistry map[string]MakeMCPSource
+
+// Register adds a source to the registry
+func (r SourceRegistry) Register(source MakeMCPSource) {
+	r[source.Name()] = source
+}
+
+// GetAll returns all registered sources
+func (r SourceRegistry) GetAll() map[string]MakeMCPSource {
+	result := make(map[string]MakeMCPSource)
+	for name, source := range r {
+		result[name] = source
+	}
+	return result
+}
+
+// CreateHandlers attaches handler functions to all tools in the MakeMCPApp
+func CreateHandlers(app *config.MakeMCPApp) error {
+	sourceType := app.Config.SourceType
+	source, exists := (*SourcesRegistry)[sourceType]
+	if !exists {
+		return fmt.Errorf("unknown source type: %s", sourceType)
+	}
+	return source.AttachHandlers(app)
 }

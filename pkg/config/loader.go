@@ -19,12 +19,13 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
 )
 
 // SaveToFile serializes the given MakeMCPApp as JSON and writes it to a file
 // The filename is derived from the MCP server name (e.g., "myserver.makemcp.json")
 func SaveToFile(app *MakeMCPApp) error {
-	filename := fmt.Sprintf("%s.makemcp.json", app.Name)
+	filename := fmt.Sprintf("%s_makemcp.json", app.Name)
 	file, err := os.Create(filename)
 	if err != nil {
 		return fmt.Errorf("failed to create file: %w", err)
@@ -36,7 +37,14 @@ func SaveToFile(app *MakeMCPApp) error {
 	if err := encoder.Encode(app); err != nil {
 		return fmt.Errorf("failed to encode JSON: %w", err)
 	}
-	log.Printf("MakeMCPApp saved to %s\n", filename)
+
+	// Get absolute path for logging
+	absPath, err := filepath.Abs(filename)
+	if err != nil {
+		log.Printf("MakeMCPApp saved to %s\n", filename)
+	} else {
+		log.Printf("MakeMCPApp saved to %s\n", absPath)
+	}
 	return nil
 }
 
