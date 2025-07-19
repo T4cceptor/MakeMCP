@@ -136,6 +136,11 @@ jobs:
           body: |
             ## Installation
 
+            ### Quick Install (Recommended)
+            ```bash
+            curl -sSL https://raw.githubusercontent.com/T4cceptor/MakeMCP/main/install.sh | bash
+            ```
+
             ### Download Binary
             Download the appropriate binary for your platform from the assets below.
 
