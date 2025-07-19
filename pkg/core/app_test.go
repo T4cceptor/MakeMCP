@@ -1,0 +1,201 @@
+// Copyright 2025 MakeMCP Contributors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package core
+
+import (
+	"context"
+	"testing"
+
+	"github.com/mark3labs/mcp-go/mcp"
+)
+
+// mockSourceParams implements SourceParams for testing.
+type mockSourceParams struct {
+	sharedParams *SharedParams
+	sourceType   string
+}
+
+func (m *mockSourceParams) GetSharedParams() *SharedParams {
+	return m.sharedParams
+}
+
+func (m *mockSourceParams) Validate() error {
+	return nil
+}
+
+func (m *mockSourceParams) ToJSON() string {
+	return `{"sourceType": "` + m.sourceType + `"}`
+}
+
+func (m *mockSourceParams) GetSourceType() string {
+	return m.sourceType
+}
+
+// mockTool implements MakeMCPTool for testing.
+type mockTool struct {
+	name        string
+	description string
+}
+
+func (m *mockTool) GetName() string {
+	return m.name
+}
+
+func (m *mockTool) GetHandler() func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		return &mcp.CallToolResult{}, nil
+	}
+}
+
+func (m *mockTool) ToMcpTool() McpTool {
+	return McpTool{
+		Name:        m.name,
+		Description: m.description,
+		InputSchema: McpToolInputSchema{
+			Type: "object",
+		},
+		Annotations: McpToolAnnotation{
+			Title: m.name,
+		},
+	}
+}
+
+func (m *mockTool) ToJSON() string {
+	return `{"name": "` + m.name + `", "description": "` + m.description + `"}`
+}
+
+func TestNewMakeMCPApp(t *testing.T) {
+	tests := []struct {
+		name         string
+		appName      string
+		version      string
+		sourceParams SourceParams
+		wantName     string
+		wantVersion  string
+		wantSource   string
+	}{
+		{
+			name:    "create app with basic params",
+			appName: "TestApp",
+			version: "1.0.0",
+			sourceParams: &mockSourceParams{
+				sharedParams: NewSharedParams("test", TransportTypeStdio),
+				sourceType:   "test",
+			},
+			wantName:    "TestApp",
+			wantVersion: "1.0.0",
+			wantSource:  "test",
+		},
+		{
+			name:    "create app with empty name",
+			appName: "",
+			version: "2.0.0",
+			sourceParams: &mockSourceParams{
+				sharedParams: NewSharedParams("openapi", TransportTypeHTTP),
+				sourceType:   "openapi",
+			},
+			wantName:    "",
+			wantVersion: "2.0.0",
+			wantSource:  "openapi",
+		},
+		{
+			name:    "create app with different transport",
+			appName: "HTTPApp",
+			version: "1.2.3",
+			sourceParams: &mockSourceParams{
+				sharedParams: NewSharedParams("cli", TransportTypeHTTP),
+				sourceType:   "cli",
+			},
+			wantName:    "HTTPApp",
+			wantVersion: "1.2.3",
+			wantSource:  "cli",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			app := NewMakeMCPApp(tt.appName, tt.version, tt.sourceParams)
+
+			if app.Name != tt.wantName {
+				t.Errorf("NewMakeMCPApp().Name = %v, want %v", app.Name, tt.wantName)
+			}
+			if app.Version != tt.wantVersion {
+				t.Errorf("NewMakeMCPApp().Version = %v, want %v", app.Version, tt.wantVersion)
+			}
+			if app.SourceType != tt.wantSource {
+				t.Errorf("NewMakeMCPApp().SourceType = %v, want %v", app.SourceType, tt.wantSource)
+			}
+			if app.SourceParams != tt.sourceParams {
+				t.Errorf("NewMakeMCPApp().SourceParams = %v, want %v", app.SourceParams, tt.sourceParams)
+			}
+			if len(app.Tools) != 0 {
+				t.Errorf("NewMakeMCPApp().Tools should be empty, got %d tools", len(app.Tools))
+			}
+		})
+	}
+}
+
+func TestMakeMCPApp_ToolsManagement(t *testing.T) {
+	sourceParams := &mockSourceParams{
+		sharedParams: NewSharedParams("test", TransportTypeStdio),
+		sourceType:   "test",
+	}
+
+	app := NewMakeMCPApp("TestApp", "1.0.0", sourceParams)
+
+	// Test adding tools
+	tool1 := &mockTool{name: "tool1", description: "First tool"}
+	tool2 := &mockTool{name: "tool2", description: "Second tool"}
+
+	app.Tools = append(app.Tools, tool1, tool2)
+
+	if len(app.Tools) != 2 {
+		t.Errorf("Expected 2 tools, got %d", len(app.Tools))
+	}
+
+	if app.Tools[0].GetName() != "tool1" {
+		t.Errorf("Expected first tool name 'tool1', got %s", app.Tools[0].GetName())
+	}
+
+	if app.Tools[1].GetName() != "tool2" {
+		t.Errorf("Expected second tool name 'tool2', got %s", app.Tools[1].GetName())
+	}
+}
+
+func TestMakeMCPApp_SourceTypeFromParams(t *testing.T) {
+	tests := []struct {
+		name       string
+		sourceType string
+	}{
+		{"openapi source", "openapi"},
+		{"cli source", "cli"},
+		{"custom source", "custom"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			sourceParams := &mockSourceParams{
+				sharedParams: NewSharedParams(tt.sourceType, TransportTypeStdio),
+				sourceType:   tt.sourceType,
+			}
+
+			app := NewMakeMCPApp("TestApp", "1.0.0", sourceParams)
+
+			if app.SourceType != tt.sourceType {
+				t.Errorf("Expected SourceType %s, got %s", tt.sourceType, app.SourceType)
+			}
+		})
+	}
+}
