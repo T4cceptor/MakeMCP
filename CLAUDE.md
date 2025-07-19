@@ -82,11 +82,14 @@ make release
 
 **Testing Commands:**
 ```bash
-# Test config generation with local server
-make local-config-test
+# Test OpenAPI integration with local server
+make local-openapi-test
 
-# Alias for local-config-test
+# Alias for local-openapi-test  
 make local-test
+
+# Test loading from config file
+make local-file-test
 ```
 
 ### Manual Build Commands
@@ -119,11 +122,12 @@ make local-test
 - Tools include detailed descriptions with parameter examples
 
 ### Parameter Handling
-- Parameters are grouped by location using `SplitParams` struct
+- Parameters are grouped by location using `ToolParams` struct
 - Path parameters are substituted in URL templates
 - Query parameters are URL-encoded for GET/DELETE requests
 - Body parameters are JSON-marshaled for POST/PUT requests
 - Headers and cookies are set on HTTP requests
+- Prefix-based parameter parsing (e.g., `path__id`, `query__limit`, `header__auth`)
 
 ### Transport Support
 - Stdio transport for direct MCP protocol communication
@@ -150,3 +154,108 @@ The tool generates `.makemcp.json` configuration files that store:
 2. Specify base URL for API calls
 3. Choose transport (stdio for MCP clients, http for web access)
 4. Tool creates MCP server with auto-generated tools for each API endpoint
+
+## Recent Major Improvements (2025-07-19)
+
+### Code Quality and Linting
+The project now has comprehensive linting configuration and all critical issues have been resolved:
+
+**Lint Command:**
+- `make lint` now passes successfully with comprehensive golangci-lint configuration
+- Critical issues fixed: cyclomatic complexity, unused parameters, error handling
+- Style issues appropriately ignored via `.golangci.yml` exclude rules
+- Compatible with CI/CD pipelines
+
+**Code Improvements:**
+- **Reduced Cyclomatic Complexity**: Refactored `GetHandlerFunction` from complexity 17 to ~8 by extracting helper functions:
+  - `buildRequestURL()` - URL construction and query parameters
+  - `buildRequestBody()` - Request body preparation for non-GET methods  
+  - `setRequestHeaders()` - Headers and cookies application
+- **Fixed Error Handling**: All `errcheck` violations resolved with proper error checking
+- **Removed Dead Code**: Eliminated unused parameters and functions
+- **Modern Go Practices**: Updated octal literals (`0644` → `0o644`), improved type safety
+
+### Build System Fixes
+**GitHub Actions:**
+- Fixed build failures in CI/CD pipeline by correcting Go build paths
+- Updated both `ci.yml` and `release.yml` to use `./cmd/makemcp.go` instead of `.`
+- Cross-platform builds now work correctly for all target platforms
+
+**Makefile Improvements:**
+- Fixed broken `local-test` target dependency
+- All make commands verified and working:
+  - `make dev` - Complete development workflow
+  - `make lint` - Passes with proper ignore rules
+  - `make test` - Full test suite (39/39 tests passing)
+  - `make build` - Binary compilation
+  - `make local-test` - OpenAPI integration testing
+
+### Architecture Enhancements
+**Parameter Handling:**
+- Improved `ToolParams` struct usage for better type safety
+- Enhanced parameter parsing with prefix-based approach
+- Better separation of concerns between URL, body, and header handling
+
+**Error Handling:**
+- Proper file closing with error checking
+- Improved error propagation through the application
+- Better logging for debugging
+
+### Testing and Reliability
+**Test Coverage:**
+- All tests passing with race condition detection (`-race` flag)
+- Comprehensive test coverage for core functionality
+- Integration tests for OpenAPI source parsing
+- Proper test cleanup and isolation
+
+**Development Workflow:**
+- `make dev` provides complete CI-like workflow locally
+- Consistent formatting with `make fmt`
+- Dependency verification with `make tidy`
+- Development dependencies managed with `make dev-deps`
+
+### Configuration and Documentation
+**Lint Configuration (`.golangci.yml`):**
+- Comprehensive linter configuration with 23 enabled linters
+- Appropriate exclusions for cosmetic issues (godot, naming suggestions)
+- Test-specific exclusions for appropriate linters
+- 5-minute timeout for complex analysis
+
+**Build Configuration:**
+- Consistent build flags across Makefile and GitHub Actions
+- Version injection working correctly
+- Cross-platform compilation support
+- Proper binary naming and output directories
+
+### Best Practices Implementation
+**Code Style:**
+- Modern Go idioms throughout codebase
+- Consistent error handling patterns
+- Proper resource cleanup (file handles, HTTP responses)
+- Type safety improvements with pointer receivers for large structs
+
+**Development Process:**
+- Lint-first development approach
+- Comprehensive testing before commits
+- Makefile-driven development workflow
+- CI/CD pipeline compatibility
+
+## Development Workflow Recommendations
+
+**For New Features:**
+1. Run `make dev` to ensure clean starting state
+2. Implement feature with proper error handling
+3. Add tests for new functionality
+4. Verify `make lint` passes
+5. Test with `make local-test` if OpenAPI-related
+
+**For Bug Fixes:**
+1. Write failing test first
+2. Implement fix
+3. Ensure `make dev` completes successfully
+4. Verify fix doesn't break existing functionality
+
+**Before Commits:**
+- Always run `make lint` to ensure code quality
+- Run `make test` to verify no regressions
+- Use `make build` to ensure compilation succeeds
