@@ -68,7 +68,7 @@ local-openapi-test: ## Test config generation with local server
 local-file-test:
 	$(BUILD_DIR)/$(BINARY_NAME) load makemcp.json
 
-local-test: local-config-test ## Alias for local-config-test
+local-test: local-openapi-test ## Alias for local-openapi-test
 
 # Cross-compilation targets
 build-all: ## Build for all platforms
