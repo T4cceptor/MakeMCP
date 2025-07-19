@@ -16,46 +16,28 @@ MakeMCP is a simple CLI tool that converts OpenAPI specifications into MCP (Mode
 
 ### Install
 
-### Download Binary (Recommended)
-
-Download the latest binary for your platform from [GitHub Releases](https://github.com/T4cceptor/MakeMCP/releases):
+### Quick Install (Recommended)
 
 ```bash
 # Linux/macOS - automatic download and install
 curl -sSL https://raw.githubusercontent.com/T4cceptor/MakeMCP/main/install.sh | bash
-
-# Manual download
-# Visit https://github.com/T4cceptor/MakeMCP/releases
-# Download the appropriate archive for your platform
-# Extract and move the binary to your PATH
 ```
 
-### Go Install
+### Other Installation Methods
 
+**Download Binary:**
+Download the latest binary for your platform from [GitHub Releases](https://github.com/T4cceptor/MakeMCP/releases)
+
+**Go Install:**
 ```bash
 go install github.com/T4cceptor/MakeMCP@latest
 ```
 
-### Build from Source
-
+**Build from Source:**
 ```bash
 git clone https://github.com/T4cceptor/MakeMCP
 cd MakeMCP
-go build -o makemcp .
-```
-
-### Package Managers (Coming Soon)
-
-```bash
-# macOS/Linux
-brew install makemcp
-
-# Windows
-scoop install makemcp
-
-# Linux
-apt-get install makemcp  # Ubuntu/Debian
-yum install makemcp      # RHEL/CentOS
+make build
 ```
 
 ### Basic Usage
@@ -67,7 +49,7 @@ makemcp openapi -s "http://localhost:8081/openapi.json" -b "http://localhost:808
 
 **2. Run as HTTP server:**
 ```bash
-makemcp openapi -s "http://localhost:8081/openapi.json" -b "http://localhost:8081" -t http
+makemcp openapi -s "http://localhost:8081/openapi.json" -b "http://localhost:8081" -t http -port 3000
 ```
 
 **3. Use with MCP clients:**
@@ -136,7 +118,7 @@ makemcp openapi -s "http://localhost:8081/openapi.json" -b "http://localhost:808
 - `--dev-mode` - Enable development mode (suppresses security warnings)
 - `-h, --help` - Show help
 
-**`makemcp file <config-file>`** - Load MakeMCP configuration and start server
+**`makemcp load <config-file>`** - Load MakeMCP configuration and start server
 
 **Options:**
 - `-t, --transport <stdio|http>` - Override transport protocol from config
@@ -155,10 +137,10 @@ makemcp openapi -s "./spec.json" -b "http://localhost:3000" -t http --port 9000
 makemcp openapi -s "http://api.example.com/openapi.json" -b "http://api.example.com" --config-only
 
 # Load and run from saved configuration
-makemcp file my-api-server.makemcp.json
+makemcp load makemcp.json
 
 # Load configuration with overrides
-makemcp file my-api-server.makemcp.json --transport http --port 9090
+makemcp load makemcp.json --transport http --port 9090
 ```
 
 ### Global Options
@@ -167,10 +149,12 @@ makemcp file my-api-server.makemcp.json --transport http --port 9090
 
 ## Configuration
 
-MakeMCP generates `.makemcp.json` configuration files that contain:
+MakeMCP generates `makemcp.json` configuration files that contain:
 - MCP server metadata (name, version, transport)
 - Tool definitions with schemas and handler information
-- OpenAPI configuration (base URL, etc.)
+- OpenAPI source configuration (base URL, spec location, etc.)
+
+Use `--config-only` to generate configuration without starting the server, then use `makemcp load` to start from the saved configuration.
 
 **Example configuration:**
 ```json
@@ -195,27 +179,17 @@ MakeMCP generates `.makemcp.json` configuration files that contain:
 
 ## Troubleshooting
 
-**Common Issues:**
+**Common Steps:**
 
-**"OpenAPI spec not found"**
-- Verify the URL or file path is correct
-- Check network connectivity for remote URLs
-- Ensure the OpenAPI spec is valid JSON/YAML
-
-**"Connection refused"**
-- Verify the base URL is accessible
-- Check if the API server is running
-- Ensure firewall/network settings allow connections
-
-**"Invalid OpenAPI specification"**
-- Validate your OpenAPI spec using tools like Swagger Editor
-- Check for syntax errors in JSON/YAML
-- Ensure the spec follows OpenAPI 3.0+ format
-
-**MCP client can't connect:**
-- Check the command path in your MCP client configuration
-- Verify makemcp is installed and accessible
-- Check transport settings (stdio vs http)
+- for OpenAPI:
+  - if server start fails:
+    - this is likely due to a configuration and/or parsing issue from source
+    - Verify both URL/path to OpenAPI specification json is correct and publicly available (we do not support auth yet)
+    - Verify that the specification is valid (e.g. if you provide a file check if its indeed a valid OpenAPI spec) and it follows OpenAPI 3.0+ format - older formats are currently not supported
+  - if tool invocation fails:
+    - check how parameters are provided to the MCP tool, the correct format should be something like `<parameter_location>__<parameter_name>: <parameter value>`, for example: `body__user_email: test@example.com` or `path__user_id: 123` - the location is delimited using double underscores `__` which is then used for parsing the request
+    - Ensure firewall/network settings allow connections
+    - Check transport settings (stdio vs http)
 
 ## Dependencies
 
@@ -231,16 +205,22 @@ Please read [CONTRIBUTING.md](CONTRIBUTING.md) for details on our code of conduc
 
 This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENSE) file for details.
 
-## Roadmap
+## Features
 
-**Short term:**
-- CLI tool integration (auto-generate MCP tools from `--help` output)
-- MCP server proxying capabilities
-- Enhanced processors for custom tool modification
-- Web frontend for MCP tool management
+**Current:**
+- ✅ OpenAPI 3.0+ specification parsing
+- ✅ Full MCP protocol compliance
+- ✅ Multiple transport support (stdio, HTTP)
+- ✅ Comprehensive parameter handling (path, query, body, headers)
+- ✅ Configuration file generation and loading
+- ✅ Cross-platform binaries (Linux, macOS, Windows, FreeBSD)
+- ✅ Security features (SSRF protection, URL validation)
+- ✅ Development mode for testing
 
-**Long term:**
-- Framework documentation processing
-- Advanced authentication mechanisms
-- Plugin system for custom processors
-- Performance optimizations for large APIs
+**Planned:**
+- 🔄 CLI tool integration (auto-generate MCP tools from `--help` output)
+- 🔄 Package manager support (Homebrew, APT, etc.)
+- 🔄 GraphQL specification support
+- 🔄 MCP server proxying capabilities
+- 🔄 Enhanced authentication mechanisms
+- 🔄 Plugin system for custom processors
