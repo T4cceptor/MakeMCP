@@ -45,7 +45,7 @@ func handleLoadCommand(ctx context.Context, cmd *cli.Command) error {
 	}
 
 	configPath := args[0]
-	
+
 	// Get absolute path for logging
 	absPath, err := filepath.Abs(configPath)
 	if err != nil {
@@ -55,16 +55,13 @@ func handleLoadCommand(ctx context.Context, cmd *cli.Command) error {
 	}
 
 	// Load configuration from file
+	// Note: app is loaded with tool handlers attached
 	app, err := LoadFromFile(configPath)
 	if err != nil {
 		return fmt.Errorf("failed to load configuration from %s: %w", configPath, err)
 	}
 
 	log.Printf("Loaded configuration for MCP server: %s v%s", app.Name, app.Version)
-
-	// TODO: Reconstruct tool handlers based on source type
-	// For now, this will work for basic config loading but handlers won't be attached
-	// This will need to be implemented once tool marshaling/unmarshaling is ready
 
 	// Start server using existing logic
 	return StartServer(app)

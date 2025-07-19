@@ -22,14 +22,20 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/T4cceptor/MakeMCP/pkg/config"
+	core "github.com/T4cceptor/MakeMCP/pkg/core"
 	"github.com/T4cceptor/MakeMCP/pkg/sources"
 )
 
 // SaveToFile serializes the given MakeMCPApp as JSON and writes it to a file
-// The filename is derived from the MCP server name (e.g., "myserver.makemcp.json")
-func SaveToFile(app *config.MakeMCPApp) error {
-	filename := fmt.Sprintf("%s_makemcp.json", app.Name)
+// The filename is derived from the file parameter or defaults to app name (e.g., "makemcp.json")
+func SaveToFile(app *core.MakeMCPApp) error {
+	var filename string
+	sharedParams := app.SourceParams.GetSharedParams()
+	if sharedParams.File != "" {
+		filename = fmt.Sprintf("%s.json", sharedParams.File)
+	} else {
+		filename = fmt.Sprintf("%s_makemcp.json", app.Name)
+	}
 	file, err := os.Create(filename)
 	if err != nil {
 		return fmt.Errorf("failed to create file: %w", err)
@@ -53,7 +59,7 @@ func SaveToFile(app *config.MakeMCPApp) error {
 }
 
 // LoadFromFile loads a MakeMCPApp from a JSON file
-func LoadFromFile(filename string) (*config.MakeMCPApp, error) {
+func LoadFromFile(filename string) (*core.MakeMCPApp, error) {
 	file, err := os.Open(filename)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open file: %w", err)

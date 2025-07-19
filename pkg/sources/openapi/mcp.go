@@ -28,7 +28,7 @@ import (
 	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/mark3labs/mcp-go/mcp"
 
-	"github.com/T4cceptor/MakeMCP/pkg/config"
+	core "github.com/T4cceptor/MakeMCP/pkg/core"
 )
 
 // OpenAPISource implements the sources.Source interface for OpenAPI specifications
@@ -39,23 +39,26 @@ func (s *OpenAPISource) Name() string {
 	return "openapi"
 }
 
+// ParseParams converts raw CLI input into typed OpenAPI parameters
+func (s *OpenAPISource) ParseParams(input *core.CLIParamsInput) (core.SourceParams, error) {
+	return ParseFromCLIInput(input)
+}
+
 // Parse converts an OpenAPI specification into a MakeMCPApp configuration
-func (s *OpenAPISource) Parse(params *config.CLIParams) (*config.MakeMCPApp, error) {
-	// Extract OpenAPI-specific parameters
-	var openAPIParams OpenAPIParams
-	if err := openAPIParams.FromCLIParams(params); err != nil {
-		return nil, fmt.Errorf("failed to parse OpenAPI parameters: %w", err)
+func (s *OpenAPISource) Parse(params core.SourceParams) (*core.MakeMCPApp, error) {
+	// Type assert to OpenAPIParams
+	openAPIParams, ok := params.(*OpenAPIParams)
+	if !ok {
+		return nil, fmt.Errorf("expected OpenAPIParams, got %T", params)
 	}
 
 	// Security checks
-	if !params.DevMode {
+	if !openAPIParams.DevMode {
 		WarnURLSecurity(openAPIParams.Specs, "OpenAPI spec", false)
 		WarnURLSecurity(openAPIParams.BaseURL, "Base URL", false)
 	}
-	app := config.NewMakeMCPApp("", "", openAPIParams.CLIParams.Transport)
-	app.SourceType = s.Name() // Set source type
-	app.CliParams = openAPIParams.CLIParams
-	// both are useful, but it raises dependency concerns
+
+	app := core.NewMakeMCPApp("", "", openAPIParams)
 
 	// Load the OpenAPI specification
 	doc, err := s.loadOpenAPISpec(openAPIParams.Specs, openAPIParams.StrictValidate)
@@ -72,7 +75,7 @@ func (s *OpenAPISource) Parse(params *config.CLIParams) (*config.MakeMCPApp, err
 	}
 
 	// Convert OpenAPI operations to MCP tools
-	var tools []config.MakeMCPTool
+	var tools []core.MakeMCPTool
 	for path, pathItem := range doc.Paths.Map() {
 		for method, operation := range pathItem.Operations() {
 			tool, err := s.createToolFromOperation(method, path, operation, params.ToJSON())
@@ -139,13 +142,13 @@ func (s *OpenAPISource) detectSourceType(openAPISpecLocation string) string {
 	return "file"
 }
 
-func (s *OpenAPISource) GetSampleTool() config.MakeMCPTool {
+func (s *OpenAPISource) GetSampleTool() core.MakeMCPTool {
 	return &OpenAPIMcpTool{}
 }
 
 // UnmarshalConfig reconstructs a MakeMCPApp from JSON data for the load command
-func (s *OpenAPISource) UnmarshalConfig(data []byte) (*config.MakeMCPApp, error) {
-	return config.UnmarshalConfigWithTools[*OpenAPIMcpTool](data)
+func (s *OpenAPISource) UnmarshalConfig(data []byte) (*core.MakeMCPApp, error) {
+	return core.UnmarshalConfigWithTypedParams[*OpenAPIMcpTool, *OpenAPIParams](data)
 }
 
 // OpenAPIHandlerInput defines how a particular endpoint is to be called
@@ -169,7 +172,7 @@ func NewOpenAPIHandlerInput(method, path string) OpenAPIHandlerInput {
 }
 
 type OpenAPIMcpTool struct {
-	config.McpTool
+	core.McpTool
 	OpenAPIHandlerInput *OpenAPIHandlerInput `json:"oapiHandlerInput,omitempty"`
 	handler             func(
 		ctx context.Context,
@@ -182,7 +185,7 @@ func (o *OpenAPIMcpTool) GetName() string {
 	return o.McpTool.Name
 }
 
-func (o *OpenAPIMcpTool) ToMcpTool() config.McpTool {
+func (o *OpenAPIMcpTool) ToMcpTool() core.McpTool {
 	return o.McpTool
 }
 
@@ -216,7 +219,7 @@ func (s *OpenAPISource) createToolFromOperation(method, path string, operation *
 
 	// Create the tool
 	tool := OpenAPIMcpTool{
-		McpTool: config.McpTool{
+		McpTool: core.McpTool{
 			Name:        toolName,
 			Description: description,
 			InputSchema: toolInputSchema,
@@ -254,7 +257,7 @@ func (s *OpenAPISource) getToolName(method string, path string, operation *opena
 // getToolInputSchema creates the input schema for a tool
 func (s *OpenAPISource) getToolInputSchema(
 	method string, path string, operation *openapi3.Operation,
-) config.McpToolInputSchema {
+) core.McpToolInputSchema {
 	// TODO: refactor to get rid of mcp dependency
 	genericProps := make(map[string]interface{})
 	var required []string
@@ -293,7 +296,7 @@ func (s *OpenAPISource) getToolInputSchema(
 		}
 	}
 
-	return config.McpToolInputSchema{ // TODO: refactor to get rid of mcp dependency
+	return core.McpToolInputSchema{ // TODO: refactor to get rid of mcp dependency
 		Type:       "object",
 		Properties: genericProps,
 		Required:   required,
@@ -303,9 +306,9 @@ func (s *OpenAPISource) getToolInputSchema(
 // getToolAnnotations returns tool annotations based on HTTP method and operation
 func (s *OpenAPISource) getToolAnnotations(
 	method string, path string, operation *openapi3.Operation,
-) config.McpToolAnnotation {
+) core.McpToolAnnotation {
 	// TODO: refactor to get rid of mcp dependency
-	annotation := config.McpToolAnnotation{
+	annotation := core.McpToolAnnotation{
 		Title:           s.getToolName(method, path, operation),
 		ReadOnlyHint:    nil,
 		DestructiveHint: nil,
@@ -408,12 +411,14 @@ func extractRequestBodyProperties(operation *openapi3.Operation) (map[string]Too
 }
 
 // AttachToolHandlers adds tool handler functions to app
-func (s *OpenAPISource) AttachToolHandlers(app *config.MakeMCPApp) error {
-	baseUrl := app.CliParams.GetFlag(baseUrlCommand.Name).(string)
-	// JSON technically only knows "number", which is parsed as float64
-	// since timeout is supposed to be in seconds, we just cast it here
-	timeout := int(app.CliParams.GetFlag("timeout").(float64))
-	apiClient := NewAPIClient(baseUrl, timeout)
+func (s *OpenAPISource) AttachToolHandlers(app *core.MakeMCPApp) error {
+	// Type assert to get OpenAPI-specific parameters
+	openAPIParams, ok := app.SourceParams.(*OpenAPIParams)
+	if !ok {
+		return fmt.Errorf("expected OpenAPIParams, got %T", app.SourceParams)
+	}
+
+	apiClient := NewAPIClient(openAPIParams.BaseURL, openAPIParams.Timeout)
 	for i, tool := range app.Tools {
 		// TODO: ugly type assertion
 		openApiTool := tool.(*OpenAPIMcpTool)

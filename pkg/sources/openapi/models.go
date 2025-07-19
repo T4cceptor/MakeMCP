@@ -1,7 +1,5 @@
 package openapi
 
-import "github.com/T4cceptor/MakeMCP/pkg/config"
-
 // ParameterLocation defines where a parameter is located in the HTTP request
 type ParameterLocation string
 
@@ -21,36 +19,6 @@ func (p ParameterLocation) IsValid() bool {
 	default:
 		return false
 	}
-}
-
-// OpenAPIParams holds OpenAPI-specific parameters
-type OpenAPIParams struct {
-	Specs          string `json:"specs"`          // URL to OpenAPI specs
-	BaseURL        string `json:"baseURL"`        // Base URL of the API
-	StrictValidate bool   `json:"strictValidate"` // Enable strict OpenAPI validation
-	Timeout        int    `json:"timeout"`        // HTTP timeout in seconds
-
-	config.CLIParams
-}
-
-// FromCLIParams extracts OpenAPI-specific parameters from generic CLIParams
-func (p *OpenAPIParams) FromCLIParams(cliParams *config.CLIParams) error {
-	p.CLIParams = *cliParams
-	if specs, ok := cliParams.CliFlags["specs"].(string); ok {
-		p.Specs = specs
-	}
-	if baseURL, ok := cliParams.CliFlags["base-url"].(string); ok {
-		p.BaseURL = baseURL
-	}
-	if strictValidate, ok := cliParams.CliFlags["strict"].(bool); ok {
-		p.StrictValidate = strictValidate
-	}
-	if timeout, ok := cliParams.CliFlags["timeout"].(int); ok {
-		p.Timeout = timeout
-	} else {
-		p.Timeout = 30 // default timeout
-	}
-	return nil
 }
 
 // ToolParams groups all parameter maps by location for handler logic

@@ -17,7 +17,7 @@ package openapi
 import (
 	"testing"
 
-	"github.com/T4cceptor/MakeMCP/pkg/config"
+	core "github.com/T4cceptor/MakeMCP/pkg/core"
 	"github.com/getkin/kin-openapi/openapi3"
 )
 
@@ -60,15 +60,27 @@ func TestOpenAPISource_LoadSpec(t *testing.T) {
 
 func TestOpenAPISource_Parse(t *testing.T) {
 	source := &OpenAPISource{}
-	params := config.CLIParams{
+
+	// Create input parameters using new structure
+	sharedParams := core.NewSharedParams("openapi", core.TransportTypeStdio)
+	input := &core.CLIParamsInput{
+		SharedParams: sharedParams,
 		CliFlags: map[string]any{
-			"specs": "../../../testdata/sample_openapi.json",
+			"specs":    "../../../testdata/sample_openapi.json",
+			"base-url": "http://localhost:8080",
 		},
+		CliArgs: []string{},
 	}
 
-	app, err := source.Parse(&params)
+	// Parse input into typed parameters
+	sourceParams, err := source.ParseParams(input)
 	if err != nil {
-		t.Fatalf("Expected no error but got: %v", err)
+		t.Fatalf("Expected no error from ParseParams but got: %v", err)
+	}
+
+	app, err := source.Parse(sourceParams)
+	if err != nil {
+		t.Fatalf("Expected no error from Parse but got: %v", err)
 	}
 
 	// Test basic app structure
@@ -78,8 +90,8 @@ func TestOpenAPISource_Parse(t *testing.T) {
 	if app.Version == "" {
 		t.Error("Expected non-empty app version")
 	}
-	if app.CliParams.SourceType != "openapi" {
-		t.Errorf("Expected source type 'openapi', got %s", app.CliParams.SourceType)
+	if app.SourceParams.GetSourceType() != "openapi" {
+		t.Errorf("Expected source type 'openapi', got %s", app.SourceParams.GetSourceType())
 	}
 
 	// Test tools generation
@@ -243,7 +255,7 @@ func TestOpenAPISource_GetToolInputSchema(t *testing.T) {
 	// Check expected properties with prefixes
 	expectedProperties := map[string]string{
 		"path__userId":      "string",
-		"query__limit":      "string", // Simplified implementation uses string
+		"query__limit":      "integer", // Should match the actual OpenAPI type
 		"header__X-API-Key": "string",
 		"body__name":        "string",
 		"body__email":       "string",

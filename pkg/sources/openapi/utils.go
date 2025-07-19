@@ -217,3 +217,15 @@ func parsePrefixedParameters(argsRaw map[string]any) ToolParams {
 	}
 	return params
 }
+
+// convertTimeoutValue handles timeout value that can be either int (from CLI) or float64 (from JSON)
+func convertTimeoutValue(value any, defaultValue int) int {
+	switch v := value.(type) {
+	case int:
+		return v
+	case float64:
+		return int(v)
+	default:
+		return defaultValue
+	}
+}

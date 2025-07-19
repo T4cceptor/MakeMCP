@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package config
+package core
 
 import (
 	"context"
@@ -39,13 +39,16 @@ func (t TransportType) IsValid() bool {
 	}
 }
 
-// MCP objects
+// MCP protocol types
+
+// McpToolInputSchema defines the JSON Schema for tool input parameters
 type McpToolInputSchema struct {
 	Type       string         `json:"type"`
 	Properties map[string]any `json:"properties,omitempty"`
 	Required   []string       `json:"required,omitempty"`
 }
 
+// McpToolAnnotation provides metadata about tool behavior and characteristics
 type McpToolAnnotation struct {
 	// Human-readable title for the tool
 	Title string `json:"title,omitempty"`
@@ -59,6 +62,7 @@ type McpToolAnnotation struct {
 	OpenWorldHint *bool `json:"openWorldHint,omitempty"`
 }
 
+// McpTool represents an MCP tool definition
 type McpTool struct {
 	// The name of the tool.
 	Name string `json:"name"`
@@ -72,6 +76,7 @@ type McpTool struct {
 	Annotations McpToolAnnotation `json:"annotations"`
 }
 
+// MakeMCPTool defines the interface that all MCP tools must implement
 type MakeMCPTool interface {
 	GetName() string
 	GetHandler() func(
@@ -81,67 +86,4 @@ type MakeMCPTool interface {
 	) (*mcp.CallToolResult, error)
 	ToMcpTool() McpTool
 	ToJSON() string
-}
-
-// MakeMCPApp holds all information about the MCP server
-// Main data structure
-type MakeMCPApp struct {
-	Name       string        `json:"name"`       // Name of the App
-	Version    string        `json:"version"`    // Version of the app
-	SourceType string        `json:"sourceType"` // Type of source (openapi, cli, etc.)
-	Tools      []MakeMCPTool `json:"tools"`      // Tools the MCP server will provide
-	CliParams  CLIParams     `json:"config"`
-}
-
-// NewMakeMCPApp creates a new MakeMCPApp with default values
-func NewMakeMCPApp(name, version string, transport TransportType) MakeMCPApp {
-	// Validate transport type - if invalid, default to stdio
-	if !transport.IsValid() {
-		transport = TransportTypeStdio
-	}
-
-	return MakeMCPApp{
-		Name:       name,
-		Version:    version,
-		SourceType: "", // Will be set by source during parsing
-		Tools:      []MakeMCPTool{},
-		CliParams: CLIParams{
-			BaseCLIParams: BaseCLIParams{
-				Transport: transport,
-			},
-		},
-	}
-}
-
-// BaseCLIParams holds all CLI parameters for the makemcp commands
-type BaseCLIParams struct {
-	// Generic MCP server parameters
-	Transport  TransportType `json:"transport"`  // stdio or http
-	ConfigOnly bool          `json:"configOnly"` // if true, only creates config file
-	Port       string        `json:"port"`       // only valid with transport=http
-	DevMode    bool          `json:"devMode"`    // true if running in development mode - related to security checks
-	SourceType string        `json:"type"`       // type of source (openapi, cli, etc.)
-}
-
-// CLIParams holds all CLI parameters for the makemcp commands
-type CLIParams struct {
-	// Generic MCP server parameters
-	BaseCLIParams
-
-	// Source-specific parameters
-	CliFlags map[string]any `json:"flags"` // source-specific configuration
-	CliArgs  []string       `json:"args"`
-}
-
-func (c *CLIParams) GetFlag(flag string) any {
-	return c.CliFlags[flag]
-}
-
-// ToJSON returns a JSON representation of the CLIParams for logging and debugging
-func (c CLIParams) ToJSON() string {
-	jsonBytes, err := json.Marshal(c)
-	if err != nil {
-		return `{"error": "failed to marshal CLIParams to JSON"}`
-	}
-	return string(jsonBytes)
 }

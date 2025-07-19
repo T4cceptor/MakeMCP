@@ -18,7 +18,7 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/T4cceptor/MakeMCP/pkg/config"
+	core "github.com/T4cceptor/MakeMCP/pkg/core"
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server" // TODO: dependency on mcp-go
 	// TODO: refactor code so only this class interacts with mcp-go
@@ -26,32 +26,102 @@ import (
 	// functions
 )
 
-// This file provides methods to create and start an MCP server from a MakeMCPApp
+// ServerFactory abstracts server creation and lifecycle for dependency injection
+type ServerFactory interface {
+	CreateHTTPServer(mcpServer *server.MCPServer) HTTPServer
+	CreateStdioServer(mcpServer *server.MCPServer) StdioServer
+}
 
-// Takes a MakeMCPApp with handler functions and starts an MCP server from it
-func StartServer(app *config.MakeMCPApp) error {
-	mcpServer := GetMCPServer(app)
-	// Start the MCP server
-	switch config.TransportType(app.CliParams.Transport) {
-	case config.TransportTypeHTTP:
-		log.Println("Starting as http MCP server...")
-		streamable_server := server.NewStreamableHTTPServer(mcpServer)
-		return streamable_server.Start(
-			fmt.Sprintf(":%s", app.CliParams.Port),
-		)
-	case config.TransportTypeStdio:
-		log.Println("Starting as stdio MCP server...")
-		if err := server.ServeStdio(mcpServer); err != nil {
-			log.Printf("Server error: %v\n", err)
-			return err
-		}
-	default:
-		// TODO: raise error ?!
+// HTTPServer abstracts HTTP server operations
+type HTTPServer interface {
+	Start(addr string) error
+	Stop() error
+}
+
+// StdioServer abstracts stdio server operations
+type StdioServer interface {
+	Serve() error
+	Stop() error
+}
+
+// ProductionServerFactory implements ServerFactory for real server operations
+type ProductionServerFactory struct{}
+
+// CreateHTTPServer creates a production HTTP server wrapper
+func (f *ProductionServerFactory) CreateHTTPServer(mcpServer *server.MCPServer) HTTPServer {
+	return &productionHTTPServer{
+		server: server.NewStreamableHTTPServer(mcpServer),
 	}
+}
+
+// CreateStdioServer creates a production stdio server wrapper
+func (f *ProductionServerFactory) CreateStdioServer(mcpServer *server.MCPServer) StdioServer {
+	return &productionStdioServer{
+		mcpServer: mcpServer,
+	}
+}
+
+// productionHTTPServer wraps the real HTTP server
+type productionHTTPServer struct {
+	server *server.StreamableHTTPServer
+}
+
+func (s *productionHTTPServer) Start(addr string) error {
+	return s.server.Start(addr)
+}
+
+func (s *productionHTTPServer) Stop() error {
+	// TODO: Implement proper shutdown when mcp-go supports it
 	return nil
 }
 
-func GetMCPServer(app *config.MakeMCPApp) *server.MCPServer {
+// productionStdioServer wraps the real stdio server
+type productionStdioServer struct {
+	mcpServer *server.MCPServer
+}
+
+func (s *productionStdioServer) Serve() error {
+	return server.ServeStdio(s.mcpServer)
+}
+
+func (s *productionStdioServer) Stop() error {
+	// TODO: Implement proper shutdown when mcp-go supports it
+	return nil
+}
+
+// This file provides methods to create and start an MCP server from a MakeMCPApp
+
+// StartServerWithFactory takes a MakeMCPApp and ServerFactory to start an MCP server
+func StartServerWithFactory(app *core.MakeMCPApp, factory ServerFactory) error {
+	mcpServer := GetMCPServer(app)
+
+	sharedParams := app.SourceParams.GetSharedParams()
+	switch sharedParams.Transport {
+	case core.TransportTypeHTTP:
+		log.Println("Starting as http MCP server...")
+		httpServer := factory.CreateHTTPServer(mcpServer)
+		return httpServer.Start(fmt.Sprintf(":%s", sharedParams.Port))
+
+	case core.TransportTypeStdio:
+		log.Println("Starting as stdio MCP server...")
+		stdioServer := factory.CreateStdioServer(mcpServer)
+		if err := stdioServer.Serve(); err != nil {
+			log.Printf("Server error: %v\n", err)
+			return err
+		}
+		return nil
+
+	default:
+		return fmt.Errorf("unsupported transport type: %s", sharedParams.Transport)
+	}
+}
+
+// StartServer provides backward compatibility by using the production factory
+func StartServer(app *core.MakeMCPApp) error {
+	return StartServerWithFactory(app, &ProductionServerFactory{})
+}
+
+func GetMCPServer(app *core.MakeMCPApp) *server.MCPServer {
 	mcp_server := server.NewMCPServer(
 		app.Name,
 		app.Version,
@@ -59,7 +129,7 @@ func GetMCPServer(app *config.MakeMCPApp) *server.MCPServer {
 	)
 	for i := range app.Tools {
 		tool := &(app.Tools[i])
-		var mcpTool config.McpTool = (*tool).ToMcpTool()
+		var mcpTool core.McpTool = (*tool).ToMcpTool()
 		handlerFunc := (*tool).GetHandler()
 		mcp_server.AddTool(
 			toMcpGoTool(&mcpTool),
@@ -70,7 +140,7 @@ func GetMCPServer(app *config.MakeMCPApp) *server.MCPServer {
 	return mcp_server
 }
 
-func toMcpGoTool(tool *config.McpTool) mcp.Tool {
+func toMcpGoTool(tool *core.McpTool) mcp.Tool {
 	return mcp.Tool{
 		Name:        tool.Name,
 		Description: tool.Description,

@@ -15,7 +15,7 @@
 package sources
 
 import (
-	"github.com/T4cceptor/MakeMCP/pkg/config"
+	core "github.com/T4cceptor/MakeMCP/pkg/core"
 	"github.com/urfave/cli/v3"
 )
 
@@ -24,13 +24,16 @@ type MakeMCPSource interface {
 	// Name returns the name of the source type
 	Name() string
 
-	// Parse creates a MakeMCPApp configuration from CLI parameters (Step 1: no handlers)
-	Parse(params *config.CLIParams) (*config.MakeMCPApp, error)
+	// ParseParams converts raw CLI input into typed source-specific parameters
+	ParseParams(input *core.CLIParamsInput) (core.SourceParams, error)
+
+	// Parse creates a MakeMCPApp configuration from typed parameters (Step 1: no handlers)
+	Parse(params core.SourceParams) (*core.MakeMCPApp, error)
 
 	// AttachToolHandlers adds tool handler functions to an existing MakeMCPApp (Step 2: ready to serve)
-	AttachToolHandlers(app *config.MakeMCPApp) error
+	AttachToolHandlers(app *core.MakeMCPApp) error
 
-	UnmarshalConfig(data []byte) (*config.MakeMCPApp, error)
+	UnmarshalConfig(data []byte) (*core.MakeMCPApp, error)
 
 	// GetCommand returns the CLI command for this source
 	GetCommand() *cli.Command

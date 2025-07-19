@@ -17,7 +17,7 @@ package sources
 import (
 	"fmt"
 
-	"github.com/T4cceptor/MakeMCP/pkg/config"
+	core "github.com/T4cceptor/MakeMCP/pkg/core"
 	"github.com/T4cceptor/MakeMCP/pkg/sources/openapi"
 )
 
@@ -52,8 +52,8 @@ func (r SourceRegistry) Get(name string) MakeMCPSource {
 }
 
 // CreateHandlers attaches handler functions to all tools in the MakeMCPApp
-func CreateHandlers(app *config.MakeMCPApp) error {
-	sourceType := app.CliParams.SourceType
+func CreateHandlers(app *core.MakeMCPApp) error {
+	sourceType := app.SourceParams.GetSharedParams().SourceType
 	source, exists := (*SourcesRegistry)[sourceType]
 	if !exists {
 		return fmt.Errorf("unknown source type: %s", sourceType)

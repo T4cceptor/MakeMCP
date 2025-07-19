@@ -20,7 +20,7 @@ import (
 	"log"
 	"slices"
 
-	"github.com/T4cceptor/MakeMCP/pkg/config"
+	core "github.com/T4cceptor/MakeMCP/pkg/core"
 	"github.com/T4cceptor/MakeMCP/pkg/sources"
 	"github.com/urfave/cli/v3"
 )
@@ -35,7 +35,7 @@ var defaultFlags []cli.Flag = []cli.Flag{
 	&cli.StringFlag{
 		Name:    "transport",
 		Aliases: []string{"t"},
-		Value:   string(config.TransportTypeStdio),
+		Value:   string(core.TransportTypeStdio),
 		Usage:   "Used transport protocol for this MCP server - can be either stdio or http.",
 	},
 	&cli.BoolFlag{
@@ -53,6 +53,12 @@ var defaultFlags []cli.Flag = []cli.Flag{
 		Name:  "dev-mode",
 		Value: false,
 		Usage: "Enable development mode - suppresses security warnings for local/private URLs. Use only for local development.",
+	},
+	&cli.StringFlag{
+		Name:    "file",
+		Aliases: []string{"f"},
+		Value:   "makemcp",
+		Usage:   "Filename (without extension) for the config file that will be saved as <filename>.json",
 	},
 }
 
@@ -79,7 +85,7 @@ func GetCommands() []*cli.Command {
 	return commands
 }
 
-func GetInputConfig(source sources.MakeMCPSource, cmd *cli.Command) *config.CLIParams {
+func GetInputConfig(source sources.MakeMCPSource, cmd *cli.Command) *core.CLIParamsInput {
 	cliFlags := map[string]any{}
 	for _, flag := range cmd.Flags {
 		// We only forward flags that are not already in the default flags
@@ -88,25 +94,35 @@ func GetInputConfig(source sources.MakeMCPSource, cmd *cli.Command) *config.CLIP
 		}
 	}
 	cliArgs := cmd.Args().Slice()
-	return &config.CLIParams{
-		BaseCLIParams: config.BaseCLIParams{
-			Transport:  config.TransportType(cmd.String("transport")),
-			ConfigOnly: cmd.Bool("config-only"),
-			Port:       cmd.String("port"),
-			DevMode:    cmd.Bool("dev-mode"),
-			SourceType: source.Name(),
-		},
-		CliFlags: cliFlags,
-		CliArgs:  cliArgs,
+
+	sharedParams := core.NewSharedParams(
+		source.Name(),
+		core.TransportType(cmd.String("transport")),
+	)
+	sharedParams.ConfigOnly = cmd.Bool("config-only")
+	sharedParams.Port = cmd.String("port")
+	sharedParams.DevMode = cmd.Bool("dev-mode")
+	sharedParams.File = cmd.String("file")
+
+	return &core.CLIParamsInput{
+		SharedParams: sharedParams,
+		CliFlags:     cliFlags,
+		CliArgs:      cliArgs,
 	}
 }
 
 // HandleInput is the main orchestration function that processes CLI params with a source and manages server lifecycle
-func HandleInput(source sources.MakeMCPSource, params *config.CLIParams) error {
-	log.Printf("Creating config from %s source with params: %s", source.Name(), params.ToJSON())
+func HandleInput(source sources.MakeMCPSource, inputParams *core.CLIParamsInput) error {
+	log.Printf("Creating config from %s source with params: %s", source.Name(), inputParams.ToJSON())
+
+	// Parse raw input into typed source parameters
+	sourceParams, err := source.ParseParams(inputParams)
+	if err != nil {
+		return fmt.Errorf("failed to parse %s source parameters: %w", source.Name(), err)
+	}
 
 	// Parse with the source to create MakeMCPApp
-	app, err := source.Parse(params)
+	app, err := source.Parse(sourceParams)
 	if err != nil {
 		return fmt.Errorf("failed to parse with %s source: %w", source.Name(), err)
 	}
@@ -117,7 +133,7 @@ func HandleInput(source sources.MakeMCPSource, params *config.CLIParams) error {
 	}
 
 	// Exit if config-only mode
-	if app.CliParams.ConfigOnly {
+	if sourceParams.GetSharedParams().ConfigOnly {
 		log.Println("Configuration file created. Exiting.")
 		return nil
 	}

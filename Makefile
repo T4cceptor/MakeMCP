@@ -62,13 +62,13 @@ run: build ## Build and run the binary
 	./$(BUILD_DIR)/$(BINARY_NAME) --help
 
 # Testing commands
-local-config-test: ## Test config generation with local server
-	$(BUILD_DIR)/$(BINARY_NAME) openapi -s 'http://localhost:8081/openapi.json' -b "http://localhost:8081" --config-only true
+local-openapi-test: ## Test config generation with local server
+	$(BUILD_DIR)/$(BINARY_NAME) openapi -s 'http://localhost:8081/openapi.json' -b "http://localhost:8081"
+
+local-file-test:
+	$(BUILD_DIR)/$(BINARY_NAME) load makemcp.json
 
 local-test: local-config-test ## Alias for local-config-test
-
-load-fastapi: build ## Load and run FastAPI config
-	./$(BUILD_DIR)/$(BINARY_NAME) load FastAPI_makemcp.json
 
 # Cross-compilation targets
 build-all: ## Build for all platforms
