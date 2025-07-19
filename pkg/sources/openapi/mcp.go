@@ -32,10 +32,7 @@ import (
 )
 
 // OpenAPISource implements the sources.Source interface for OpenAPI specifications
-type OpenAPISource struct {
-	// TODO: check if this should be refactored
-	config OpenAPIConfig
-}
+type OpenAPISource struct{}
 
 // Name returns the name of this source type
 func (s *OpenAPISource) Name() string {
@@ -55,18 +52,12 @@ func (s *OpenAPISource) Parse(params *config.Config) (*config.MakeMCPApp, error)
 		WarnURLSecurity(openAPIParams.Specs, "OpenAPI spec", false)
 		WarnURLSecurity(openAPIParams.BaseURL, "Base URL", false)
 	}
-	app := config.NewMakeMCPApp(
-		"",
-		"",
-		params.Transport,
-	)
-	// TODO: refactor, this is ugly
-	s.config = openAPIParams
+	app := config.NewMakeMCPApp("", "", openAPIParams.Transport)
 	app.Config = openAPIParams.Config
 	// both are useful, but it raises dependency concerns
 
 	// Load the OpenAPI specification
-	doc, err := s.loadOpenAPISpec(s.config.Specs, s.config.StrictValidate)
+	doc, err := s.loadOpenAPISpec(openAPIParams.Specs, openAPIParams.StrictValidate)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load OpenAPI spec: %w", err)
 	}
@@ -208,8 +199,8 @@ func (s *OpenAPISource) getToolInputSchema(
 	var required []string
 
 	// Extract path, query, header, and cookie parameters
-	for _, in := range []string{"path", "query", "header", "cookie"} {
-		props, reqs := s.extractParametersByIn(operation, in)
+	for _, in := range []ParameterLocation{ParameterLocationPath, ParameterLocationQuery, ParameterLocationHeader, ParameterLocationCookie} {
+		props, reqs := extractParametersByIn(operation, in)
 		for paramName, prop := range props {
 			prefixedName := fmt.Sprintf("%s__%s", in, paramName)
 			genericProps[prefixedName] = map[string]interface{}{
@@ -226,7 +217,7 @@ func (s *OpenAPISource) getToolInputSchema(
 	}
 
 	// Extract request body properties
-	bodyProps, bodyReqs := s.extractRequestBodyProperties(operation)
+	bodyProps, bodyReqs := extractRequestBodyProperties(operation)
 	for paramName, prop := range bodyProps {
 		prefixedName := fmt.Sprintf("body__%s", paramName)
 		genericProps[prefixedName] = map[string]interface{}{
@@ -284,57 +275,82 @@ func (s *OpenAPISource) getToolAnnotations(
 	return annotation
 }
 
-// Helper functions (simplified versions of the original implementation)
-func (s *OpenAPISource) extractParametersByIn(operation *openapi3.Operation, in string) (map[string]ToolInputProperty, []string) {
-	props := make(map[string]ToolInputProperty)
-	var required []string
+// =============================================================================
+// TOOL INPUT SCHEMA GENERATION
+// =============================================================================
 
-	// This is a simplified implementation - in a real implementation,
-	// you'd need to properly parse the OpenAPI parameter schemas
-	for _, param := range operation.Parameters {
-		if param.Value != nil && param.Value.In == in {
-			props[param.Value.Name] = ToolInputProperty{
-				Type:        "string", // Simplified - should derive from schema
-				Description: param.Value.Description,
-				Location:    in,
-			}
-			if param.Value.Required {
-				required = append(required, param.Value.Name)
-			}
-		}
+// getSchemaTypeString returns the first OpenAPI type if present, otherwise defaults to "string".
+func getSchemaTypeString(schema *openapi3.Schema) string {
+	if schema != nil && schema.Type != nil && len(*schema.Type) > 0 {
+		return (*schema.Type)[0]
 	}
-
-	return props, required
+	return "string"
 }
 
-func (s *OpenAPISource) extractRequestBodyProperties(operation *openapi3.Operation) (map[string]ToolInputProperty, []string) {
-	props := make(map[string]ToolInputProperty)
+// extractParametersByIn extracts parameters of a given 'in' type (e.g., "path", "query", "header", "cookie")
+// from an OpenAPI operation and returns properties and required fields.
+func extractParametersByIn(operation *openapi3.Operation, in ParameterLocation) (map[string]ToolInputProperty, []string) {
+	properties := make(map[string]ToolInputProperty)
 	var required []string
-
-	// This is a simplified implementation - in a real implementation,
-	// you'd need to properly parse the request body schema
-	if operation.RequestBody != nil && operation.RequestBody.Value != nil {
-		// Simplified: assume JSON content type
-		if content, ok := operation.RequestBody.Value.Content["application/json"]; ok {
-			if content.Schema != nil && content.Schema.Value != nil {
-				for propName, propSchema := range content.Schema.Value.Properties {
-					props[propName] = ToolInputProperty{
-						Type:        "string", // Simplified - should derive from schema
-						Description: propSchema.Value.Description,
-						Location:    "body",
-					}
-				}
-				required = content.Schema.Value.Required
+	for _, paramRef := range operation.Parameters {
+		if paramRef.Value == nil {
+			continue
+		}
+		param := paramRef.Value
+		if param.In == string(in) {
+			typeName := getSchemaTypeString(param.Schema.Value)
+			properties[param.Name] = ToolInputProperty{
+				Type:        typeName,
+				Description: param.Description,
+				Location:    in, // Add the location field to record OpenAPI "in" value
+			}
+			if param.Required {
+				required = append(required, param.Name)
 			}
 		}
 	}
+	return properties, required
+}
 
-	return props, required
+// extractRequestBodyProperties extracts properties and required fields from the request body schema (if present).
+// Only supports application/json bodies with object schemas for now.
+func extractRequestBodyProperties(operation *openapi3.Operation) (map[string]ToolInputProperty, []string) {
+	properties := make(map[string]ToolInputProperty)
+	var required []string
+
+	if operation.RequestBody == nil || operation.RequestBody.Value == nil {
+		return properties, required
+	}
+
+	for contentType, media := range operation.RequestBody.Value.Content {
+		if contentType != "application/json" || media.Schema == nil || media.Schema.Value == nil {
+			continue
+		}
+		schema := media.Schema.Value
+		for propName, propSchemaRef := range schema.Properties {
+			propSchema := propSchemaRef.Value
+			if propSchema == nil {
+				continue
+			}
+			properties[propName] = ToolInputProperty{
+				Type:        getSchemaTypeString(propSchema),
+				Description: propSchema.Description,
+				Location:    "body",
+			}
+		}
+		// Add required fields from the schema
+		if schema.Required != nil {
+			required = append(required, schema.Required...)
+		}
+	}
+	return properties, required
 }
 
 // AttachHandlers adds tool handler functions to app
 func (s *OpenAPISource) AttachHandlers(app *config.MakeMCPApp) error {
-	apiClient := NewAPIClient(s.config.BaseURL)
+	baseUrl := app.Config.GetFlag(baseUrlCommand.Name).(string)
+	timeout := app.Config.GetFlag(timeoutCommand.Name).(int)
+	apiClient := NewAPIClient(baseUrl, timeout)
 	for i := range app.Tools {
 		app.Tools[i].HandlerFunction = GetHandlerFunction(app.Tools[i], apiClient)
 	}

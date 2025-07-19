@@ -18,6 +18,20 @@ import (
 	"github.com/urfave/cli/v3"
 )
 
+var baseUrlCommand cli.StringFlag = cli.StringFlag{
+	Name:    "base-url",
+	Aliases: []string{"b"},
+	Value:   "",
+	Usage:   "Base URL of the OpenAPI specified API. This will be called when invoking the tools.",
+}
+
+var timeoutCommand cli.IntFlag = cli.IntFlag{
+	Name:    "timeout",
+	Aliases: []string{"to"},
+	Value:   30,
+	Usage:   "HTTP timeout in seconds for API requests (default: 30)",
+}
+
 // GetCommand returns the CLI command for this source
 func (s *OpenAPISource) GetCommand() *cli.Command {
 	return &cli.Command{
@@ -30,12 +44,8 @@ func (s *OpenAPISource) GetCommand() *cli.Command {
 				Value:   "",
 				Usage:   "Where to find the OpenAPI specification - can be either a properly formed URL, including protocol, or a file path to a JSON file.",
 			},
-			&cli.StringFlag{
-				Name:    "base-url",
-				Aliases: []string{"b"},
-				Value:   "",
-				Usage:   "Base URL of the OpenAPI specified API. This will be called when invoking the tools.",
-			},
+			&baseUrlCommand,
+			&timeoutCommand,
 		},
 	}
 }

@@ -29,6 +29,16 @@ const (
 	TransportTypeStdio TransportType = "stdio"
 )
 
+// IsValid returns true if the transport type is valid
+func (t TransportType) IsValid() bool {
+	switch t {
+	case TransportTypeHTTP, TransportTypeStdio:
+		return true
+	default:
+		return false
+	}
+}
+
 // MCP objects
 type McpToolInputSchema struct {
 	Type       string         `json:"type"`
@@ -110,6 +120,11 @@ type MakeMCPApp struct {
 
 // NewMakeMCPApp creates a new MakeMCPApp with default values
 func NewMakeMCPApp(name, version string, transport TransportType) MakeMCPApp {
+	// Validate transport type - if invalid, default to stdio
+	if !transport.IsValid() {
+		transport = TransportTypeStdio
+	}
+	
 	return MakeMCPApp{
 		Name:    name,
 		Version: version,
@@ -132,6 +147,10 @@ type Config struct {
 	SourceType string         `json:"type"`  // type of source (openapi, cli, etc.)
 	CliFlags   map[string]any `json:"flags"` // source-specific configuration
 	CliArgs    []string       `json:"args"`
+}
+
+func (c *Config) GetFlag(flag string) any {
+	return c.CliFlags[flag]
 }
 
 // ToJSON returns a JSON representation of the CLIParams for logging and debugging

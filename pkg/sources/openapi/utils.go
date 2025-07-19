@@ -21,6 +21,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 )
 
 // APIClient struct to encapsulate baseURL and http.Client
@@ -29,11 +30,13 @@ type APIClient struct {
 	HTTPClient *http.Client
 }
 
-// NewAPIClient creates a new APIClient with the given baseURL
-func NewAPIClient(baseURL string) *APIClient {
+// NewAPIClient creates a new APIClient with the given baseURL and timeout
+func NewAPIClient(baseURL string, timeoutSeconds int) *APIClient {
 	return &APIClient{
-		BaseURL:    baseURL,
-		HTTPClient: &http.Client{},
+		BaseURL: baseURL,
+		HTTPClient: &http.Client{
+			Timeout: time.Duration(timeoutSeconds) * time.Second,
+		},
 	}
 }
 
@@ -193,16 +196,22 @@ func parsePrefixedParameters(argsRaw map[string]any) SplitParams {
 		}
 		location, paramName := parts[0], parts[1]
 
-		switch location {
-		case "path":
+		paramLocation := ParameterLocation(location)
+		if !paramLocation.IsValid() {
+			// Invalid parameter location, skip this parameter
+			continue
+		}
+		
+		switch paramLocation {
+		case ParameterLocationPath:
 			params.Path[paramName] = value
-		case "query":
+		case ParameterLocationQuery:
 			params.Query[paramName] = value
-		case "header":
+		case ParameterLocationHeader:
 			params.Header[paramName] = value
-		case "cookie":
+		case ParameterLocationCookie:
 			params.Cookie[paramName] = value
-		case "body":
+		case ParameterLocationBody:
 			params.Body[paramName] = value
 		}
 	}
