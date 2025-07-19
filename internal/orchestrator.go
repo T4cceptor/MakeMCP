@@ -25,7 +25,7 @@ import (
 	"github.com/urfave/cli/v3"
 )
 
-// InitializeRegistries initializes the global registries with default implementations
+// InitializeRegistries initializes the global registries with default implementations.
 func InitializeRegistries() {
 	// Initialize sources registry (sources register themselves)
 	sources.InitializeSources()
@@ -62,7 +62,7 @@ var defaultFlags []cli.Flag = []cli.Flag{
 	},
 }
 
-// GetCommands returns all CLI commands by combining source and internal commands
+// GetCommands returns all CLI commands by combining source and internal commands.
 func GetCommands() []*cli.Command {
 	var commands []*cli.Command
 
@@ -85,6 +85,7 @@ func GetCommands() []*cli.Command {
 	return commands
 }
 
+// GetInputConfig extracts CLI parameters for the given source and command..
 func GetInputConfig(source sources.MakeMCPSource, cmd *cli.Command) *core.CLIParamsInput {
 	cliFlags := map[string]any{}
 	for _, flag := range cmd.Flags {
@@ -111,7 +112,7 @@ func GetInputConfig(source sources.MakeMCPSource, cmd *cli.Command) *core.CLIPar
 	}
 }
 
-// HandleInput is the main orchestration function that processes CLI params with a source and manages server lifecycle
+// HandleInput is the main orchestration function that processes CLI params with a source and manages server lifecycle.
 func HandleInput(source sources.MakeMCPSource, inputParams *core.CLIParamsInput) error {
 	log.Printf("Creating config from %s source with params: %s", source.Name(), inputParams.ToJSON())
 
@@ -139,7 +140,9 @@ func HandleInput(source sources.MakeMCPSource, inputParams *core.CLIParamsInput)
 	}
 
 	// Create and attach handler functions to the app
-	source.AttachToolHandlers(app)
+	if err := source.AttachToolHandlers(app); err != nil {
+		return fmt.Errorf("failed to attach tool handlers: %w", err)
+	}
 
 	// Start server
 	return StartServer(app)

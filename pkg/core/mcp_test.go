@@ -315,7 +315,7 @@ func TestMcpTool(t *testing.T) {
 	}
 }
 
-// Helper functions for tests
+// Helper functions for tests.
 func boolPtr(b bool) *bool {
 	return &b
 }

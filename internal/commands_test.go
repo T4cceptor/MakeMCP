@@ -95,7 +95,7 @@ func TestHandleLoadCommand(t *testing.T) {
 		}
 	}`
 
-	if err := os.WriteFile(configFile, []byte(configContent), 0644); err != nil {
+	if err := os.WriteFile(configFile, []byte(configContent), 0o644); err != nil {
 		t.Fatalf("Failed to create test config file: %v", err)
 	}
 
@@ -184,7 +184,7 @@ func TestHandleLoadCommand(t *testing.T) {
 		invalidConfigFile := filepath.Join(tempDir, "invalid_config.json")
 		invalidContent := `{"invalid": json}`
 
-		if err := os.WriteFile(invalidConfigFile, []byte(invalidContent), 0644); err != nil {
+		if err := os.WriteFile(invalidConfigFile, []byte(invalidContent), 0o644); err != nil {
 			t.Fatalf("Failed to create invalid config file: %v", err)
 		}
 

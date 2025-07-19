@@ -19,7 +19,7 @@ import (
 	"github.com/urfave/cli/v3"
 )
 
-// MakeMCPSource defines the interface for all MCP source implementations
+// MakeMCPSource defines the interface for all MCP source implementations.
 type MakeMCPSource interface {
 	// Name returns the name of the source type
 	Name() string

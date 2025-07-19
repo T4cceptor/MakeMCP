@@ -16,7 +16,7 @@ package core
 
 import "encoding/json"
 
-// SourceParams defines the interface for source-specific parameters
+// SourceParams defines the interface for source-specific parameters.
 // Each source type implements this interface with their own typed parameters
 type SourceParams interface {
 	// GetSharedParams returns the shared parameters that all sources need
@@ -32,7 +32,7 @@ type SourceParams interface {
 	GetSourceType() string
 }
 
-// SharedParams holds parameters that are common across all source types
+// SharedParams holds parameters that are common across all source types.
 type SharedParams struct {
 	Transport  TransportType `json:"transport"`  // stdio or http
 	ConfigOnly bool          `json:"configOnly"` // if true, only creates config file
@@ -42,7 +42,7 @@ type SharedParams struct {
 	File       string        `json:"file"`       // filename (without extension) for config file
 }
 
-// NewSharedParams creates a new SharedParams with default values
+// NewSharedParams creates a new SharedParams with default values.
 func NewSharedParams(sourceType string, transport TransportType) *SharedParams {
 	// Validate transport type - if invalid, default to stdio
 	if !transport.IsValid() {
@@ -59,8 +59,8 @@ func NewSharedParams(sourceType string, transport TransportType) *SharedParams {
 	}
 }
 
-// ToJSON returns a JSON representation of the SharedParams for logging and debugging
-func (s SharedParams) ToJSON() string {
+// ToJSON returns a JSON representation of the SharedParams for logging and debugging.
+func (s *SharedParams) ToJSON() string {
 	jsonBytes, err := json.Marshal(s)
 	if err != nil {
 		return `{"error": "failed to marshal SharedParams to JSON"}`
@@ -68,14 +68,14 @@ func (s SharedParams) ToJSON() string {
 	return string(jsonBytes)
 }
 
-// CLIParamsInput holds raw CLI input that needs to be parsed into typed parameters
+// CLIParamsInput holds raw CLI input that needs to be parsed into typed parameters.
 type CLIParamsInput struct {
 	SharedParams *SharedParams  `json:"shared"`
 	CliFlags     map[string]any `json:"flags"` // raw CLI flags to be parsed by sources
 	CliArgs      []string       `json:"args"`  // raw CLI arguments
 }
 
-// ToJSON returns a JSON representation of the CLIParamsInput for logging and debugging
+// ToJSON returns a JSON representation of the CLIParamsInput for logging and debugging.
 func (c CLIParamsInput) ToJSON() string {
 	jsonBytes, err := json.Marshal(c)
 	if err != nil {

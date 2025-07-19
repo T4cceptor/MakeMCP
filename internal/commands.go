@@ -23,7 +23,7 @@ import (
 	"github.com/urfave/cli/v3"
 )
 
-// GetInternalCommands returns all CLI commands related to MakeMCP config file management
+// GetInternalCommands returns all CLI commands related to MakeMCP config file management.
 func GetInternalCommands() []*cli.Command {
 	return []*cli.Command{
 		{
@@ -36,7 +36,7 @@ func GetInternalCommands() []*cli.Command {
 	}
 }
 
-// handleLoadCommand handles the load command to start server from config file
+// handleLoadCommand handles the load command to start server from config file.
 func handleLoadCommand(ctx context.Context, cmd *cli.Command) error {
 	// Validate arguments
 	args := cmd.Args().Slice()

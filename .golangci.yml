@@ -57,6 +57,26 @@ issues:
     - text: "shadow: declaration of"
       linters:
         - govet
+    # Ignore godot comment period requirements (cosmetic)
+    - text: "Comment should end in a period"
+      linters:
+        - godot
+    # Ignore revive naming suggestions for OpenAPI types (deliberate naming for clarity)
+    - text: "type name will be used as openapi\\."
+      linters:
+        - revive
+    # Ignore gocritic parameter combination suggestions (readability preference)
+    - text: "paramTypeCombine:"
+      linters:
+        - gocritic
+    # Ignore gocritic TODO detail requirements (TODOs are intentionally brief)
+    - text: "todoCommentWithoutDetail:"
+      linters:
+        - gocritic
+    # Ignore unnamed result suggestions (return types are clear from context)
+    - text: "unnamedResult:"
+      linters:
+        - gocritic
   exclude-use-default: false
   max-issues-per-linter: 0
   max-same-issues: 0

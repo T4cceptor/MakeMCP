@@ -21,7 +21,7 @@ import (
 	"github.com/mark3labs/mcp-go/mcp"
 )
 
-// mockSourceParams implements SourceParams for testing
+// mockSourceParams implements SourceParams for testing.
 type mockSourceParams struct {
 	sharedParams *SharedParams
 	sourceType   string
@@ -43,7 +43,7 @@ func (m *mockSourceParams) GetSourceType() string {
 	return m.sourceType
 }
 
-// mockTool implements MakeMCPTool for testing
+// mockTool implements MakeMCPTool for testing.
 type mockTool struct {
 	name        string
 	description string
@@ -152,7 +152,7 @@ func TestMakeMCPApp_ToolsManagement(t *testing.T) {
 		sharedParams: NewSharedParams("test", TransportTypeStdio),
 		sourceType:   "test",
 	}
-	
+
 	app := NewMakeMCPApp("TestApp", "1.0.0", sourceParams)
 
 	// Test adding tools
@@ -190,7 +190,7 @@ func TestMakeMCPApp_SourceTypeFromParams(t *testing.T) {
 				sharedParams: NewSharedParams(tt.sourceType, TransportTypeStdio),
 				sourceType:   tt.sourceType,
 			}
-			
+
 			app := NewMakeMCPApp("TestApp", "1.0.0", sourceParams)
 
 			if app.SourceType != tt.sourceType {

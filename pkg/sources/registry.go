@@ -21,24 +21,25 @@ import (
 	"github.com/T4cceptor/MakeMCP/pkg/sources/openapi"
 )
 
-// SourcesRegistry is the global source registry
+// SourcesRegistry is the global source registry.
 var SourcesRegistry *SourceRegistry = &SourceRegistry{}
 
+// InitializeSources registers all available source types and returns the registry.
 func InitializeSources() *SourceRegistry {
 	// Register all available sources
 	SourcesRegistry.Register(&openapi.OpenAPISource{})
 	return SourcesRegistry
 }
 
-// SourceRegistry manages available sources
+// SourceRegistry manages available sources.
 type SourceRegistry map[string]MakeMCPSource
 
-// Register adds a source to the registry
+// Register adds a source to the registry.
 func (r SourceRegistry) Register(source MakeMCPSource) {
 	r[source.Name()] = source
 }
 
-// GetAll returns all registered sources
+// GetAll returns all registered sources.
 func (r SourceRegistry) GetAll() map[string]MakeMCPSource {
 	result := make(map[string]MakeMCPSource)
 	for name, source := range r {
@@ -47,11 +48,12 @@ func (r SourceRegistry) GetAll() map[string]MakeMCPSource {
 	return result
 }
 
+// Get retrieves a source by name from the registry.
 func (r SourceRegistry) Get(name string) MakeMCPSource {
 	return r[name]
 }
 
-// CreateHandlers attaches handler functions to all tools in the MakeMCPApp
+// CreateHandlers attaches handler functions to all tools in the MakeMCPApp.
 func CreateHandlers(app *core.MakeMCPApp) error {
 	sourceType := app.SourceParams.GetSharedParams().SourceType
 	source, exists := (*SourcesRegistry)[sourceType]

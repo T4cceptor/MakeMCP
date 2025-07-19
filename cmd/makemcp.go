@@ -24,12 +24,12 @@ import (
 	internal "github.com/T4cceptor/MakeMCP/internal"
 )
 
-// version is set by build flags during release
+// version is set by build flags during release.
 var version = "dev"
 
 func main() {
 	// Initialize registries
-	// Todo: refactor this to be in the /sources folder to keep responsibilities seperate
+	// Todo: refactor this to be in the /sources folder to keep responsibilities separate
 	internal.InitializeRegistries()
 
 	// Create CLI app

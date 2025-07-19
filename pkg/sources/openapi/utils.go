@@ -24,13 +24,13 @@ import (
 	"time"
 )
 
-// APIClient struct to encapsulate baseURL and http.Client
+// APIClient struct to encapsulate baseURL and http.Client.
 type APIClient struct {
 	BaseURL    string
 	HTTPClient *http.Client
 }
 
-// NewAPIClient creates a new APIClient with the given baseURL and timeout
+// NewAPIClient creates a new APIClient with the given baseURL and timeout.
 func NewAPIClient(baseURL string, timeoutSeconds int) *APIClient {
 	return &APIClient{
 		BaseURL: baseURL,
@@ -40,19 +40,19 @@ func NewAPIClient(baseURL string, timeoutSeconds int) *APIClient {
 	}
 }
 
-// boolPtr returns a pointer to the given bool value
+// boolPtr returns a pointer to the given bool value.
 func boolPtr(val bool) *bool {
 	return &val
 }
 
-// URLSecurityIssue represents a potential security concern with a URL
+// URLSecurityIssue represents a potential security concern with a URL.
 type URLSecurityIssue struct {
 	Type        string
 	Description string
 	URL         string
 }
 
-// CheckURLSecurity analyzes a URL for potential security issues
+// CheckURLSecurity analyzes a URL for potential security issues.
 func CheckURLSecurity(rawURL string) []URLSecurityIssue {
 	var issues []URLSecurityIssue
 
@@ -120,7 +120,7 @@ func CheckURLSecurity(rawURL string) []URLSecurityIssue {
 	return issues
 }
 
-// isPrivateIP checks if an IP address is in a private range
+// isPrivateIP checks if an IP address is in a private range.
 func isPrivateIP(ip net.IP) bool {
 	// Private IPv4 ranges
 	private4Ranges := []string{
@@ -148,7 +148,7 @@ func isPrivateIP(ip net.IP) bool {
 	return false
 }
 
-// WarnURLSecurity logs security warnings for suspicious URLs
+// WarnURLSecurity logs security warnings for suspicious URLs.
 func WarnURLSecurity(rawURL string, urlType string, devMode bool) {
 	if devMode {
 		return
@@ -168,7 +168,7 @@ func WarnURLSecurity(rawURL string, urlType string, devMode bool) {
 	log.Println()
 }
 
-// substitutePathParams replaces path parameters in URL template
+// substitutePathParams replaces path parameters in URL template.
 func substitutePathParams(path string, pathParams map[string]any) string {
 	for k, v := range pathParams {
 		placeholder := fmt.Sprintf("{%s}", k)
@@ -177,7 +177,7 @@ func substitutePathParams(path string, pathParams map[string]any) string {
 	return path
 }
 
-// encodeQueryParams encodes query parameters for URL
+// encodeQueryParams encodes query parameters for URL.
 func encodeQueryParams(queryParams map[string]any) string {
 	values := url.Values{}
 	for k, v := range queryParams {
@@ -186,7 +186,7 @@ func encodeQueryParams(queryParams map[string]any) string {
 	return values.Encode()
 }
 
-// parsePrefixedParameters parses parameters using prefix approach and returns SplitParams
+// parsePrefixedParameters parses parameters using prefix approach and returns SplitParams.
 func parsePrefixedParameters(argsRaw map[string]any) ToolParams {
 	params := NewSplitParams()
 	for prefixedName, value := range argsRaw {
@@ -216,16 +216,4 @@ func parsePrefixedParameters(argsRaw map[string]any) ToolParams {
 		}
 	}
 	return params
-}
-
-// convertTimeoutValue handles timeout value that can be either int (from CLI) or float64 (from JSON)
-func convertTimeoutValue(value any, defaultValue int) int {
-	switch v := value.(type) {
-	case int:
-		return v
-	case float64:
-		return int(v)
-	default:
-		return defaultValue
-	}
 }

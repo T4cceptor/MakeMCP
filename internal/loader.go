@@ -26,7 +26,7 @@ import (
 	"github.com/T4cceptor/MakeMCP/pkg/sources"
 )
 
-// SaveToFile serializes the given MakeMCPApp as JSON and writes it to a file
+// SaveToFile serializes the given MakeMCPApp as JSON and writes it to a file.
 // The filename is derived from the file parameter or defaults to app name (e.g., "makemcp.json")
 func SaveToFile(app *core.MakeMCPApp) error {
 	var filename string
@@ -40,7 +40,11 @@ func SaveToFile(app *core.MakeMCPApp) error {
 	if err != nil {
 		return fmt.Errorf("failed to create file: %w", err)
 	}
-	defer file.Close()
+	defer func() {
+		if err := file.Close(); err != nil {
+			log.Printf("Failed to close file: %v", err)
+		}
+	}()
 
 	encoder := json.NewEncoder(file)
 	encoder.SetIndent("", "  ")
@@ -58,13 +62,17 @@ func SaveToFile(app *core.MakeMCPApp) error {
 	return nil
 }
 
-// LoadFromFile loads a MakeMCPApp from a JSON file
+// LoadFromFile loads a MakeMCPApp from a JSON file.
 func LoadFromFile(filename string) (*core.MakeMCPApp, error) {
 	file, err := os.Open(filename)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open file: %w", err)
 	}
-	defer file.Close()
+	defer func() {
+		if err := file.Close(); err != nil {
+			log.Printf("Failed to close file: %v", err)
+		}
+	}()
 
 	// Read all data first
 	data, err := io.ReadAll(file)
@@ -93,7 +101,9 @@ func LoadFromFile(filename string) (*core.MakeMCPApp, error) {
 		return nil, fmt.Errorf("failed to unmarshal config: %w", err)
 	}
 
-	source.AttachToolHandlers(app)
+	if err := source.AttachToolHandlers(app); err != nil {
+		return nil, fmt.Errorf("failed to attach tool handlers: %w", err)
+	}
 
 	log.Printf("MakeMCPApp loaded from %s\n", filename)
 	return app, nil

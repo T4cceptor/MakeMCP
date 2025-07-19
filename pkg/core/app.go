@@ -14,7 +14,7 @@
 
 package core
 
-// MakeMCPApp holds all information about the MCP server
+// MakeMCPApp holds all information about the MCP server.
 // Main data structure representing a complete MCP application configuration
 type MakeMCPApp struct {
 	Name         string        `json:"name"`       // Name of the App
@@ -24,7 +24,7 @@ type MakeMCPApp struct {
 	SourceParams SourceParams  `json:"config"`     // Source-specific parameters
 }
 
-// NewMakeMCPApp creates a new MakeMCPApp with provided parameters
+// NewMakeMCPApp creates a new MakeMCPApp with provided parameters.
 func NewMakeMCPApp(name, version string, sourceParams SourceParams) MakeMCPApp {
 	return MakeMCPApp{
 		Name:         name,

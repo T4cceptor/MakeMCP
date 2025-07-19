@@ -21,15 +21,17 @@ import (
 	"github.com/mark3labs/mcp-go/mcp"
 )
 
-// TransportType defines the transport mechanism for the MCP server
+// TransportType defines the transport mechanism for the MCP server.
 type TransportType string
 
 const (
-	TransportTypeHTTP  TransportType = "http"
+	// TransportTypeHTTP represents HTTP transport for web-based MCP servers.
+	TransportTypeHTTP TransportType = "http"
+	// TransportTypeStdio represents standard I/O transport for direct MCP protocol communication.
 	TransportTypeStdio TransportType = "stdio"
 )
 
-// IsValid returns true if the transport type is valid
+// IsValid returns true if the transport type is valid.
 func (t TransportType) IsValid() bool {
 	switch t {
 	case TransportTypeHTTP, TransportTypeStdio:
@@ -41,14 +43,14 @@ func (t TransportType) IsValid() bool {
 
 // MCP protocol types
 
-// McpToolInputSchema defines the JSON Schema for tool input parameters
+// McpToolInputSchema defines the JSON Schema for tool input parameters.
 type McpToolInputSchema struct {
 	Type       string         `json:"type"`
 	Properties map[string]any `json:"properties,omitempty"`
 	Required   []string       `json:"required,omitempty"`
 }
 
-// McpToolAnnotation provides metadata about tool behavior and characteristics
+// McpToolAnnotation provides metadata about tool behavior and characteristics.
 type McpToolAnnotation struct {
 	// Human-readable title for the tool
 	Title string `json:"title,omitempty"`
@@ -62,7 +64,7 @@ type McpToolAnnotation struct {
 	OpenWorldHint *bool `json:"openWorldHint,omitempty"`
 }
 
-// McpTool represents an MCP tool definition
+// McpTool represents an MCP tool definition.
 type McpTool struct {
 	// The name of the tool.
 	Name string `json:"name"`
@@ -76,7 +78,7 @@ type McpTool struct {
 	Annotations McpToolAnnotation `json:"annotations"`
 }
 
-// MakeMCPTool defines the interface that all MCP tools must implement
+// MakeMCPTool defines the interface that all MCP tools must implement.
 type MakeMCPTool interface {
 	GetName() string
 	GetHandler() func(

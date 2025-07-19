@@ -15,7 +15,6 @@
 package internal
 
 import (
-	"context"
 	"encoding/json"
 	"os"
 	"strings"
@@ -23,40 +22,7 @@ import (
 
 	core "github.com/T4cceptor/MakeMCP/pkg/core"
 	"github.com/T4cceptor/MakeMCP/pkg/sources/openapi"
-	"github.com/mark3labs/mcp-go/mcp"
 )
-
-// mockTool implements the MakeMCPTool interface for testing
-type mockTool struct {
-	name        string
-	description string
-}
-
-func (m *mockTool) GetName() string {
-	return m.name
-}
-
-func (m *mockTool) GetHandler() func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-		return &mcp.CallToolResult{}, nil
-	}
-}
-
-func (m *mockTool) ToMcpTool() core.McpTool {
-	return core.McpTool{
-		Name:        m.name,
-		Description: m.description,
-		InputSchema: core.McpToolInputSchema{
-			Type: "object",
-		},
-	}
-}
-
-func (m *mockTool) ToJSON() string {
-	tool := m.ToMcpTool()
-	data, _ := json.Marshal(tool)
-	return string(data)
-}
 
 func TestSaveToFile(t *testing.T) {
 	// Initialize registries for tests
@@ -243,7 +209,7 @@ func TestLoadFromFile(t *testing.T) {
   }
 }`
 				filename := "test_load_valid.json"
-				if err := os.WriteFile(filename, []byte(configJSON), 0644); err != nil {
+				if err := os.WriteFile(filename, []byte(configJSON), 0o644); err != nil {
 					t.Fatalf("Failed to write test file: %v", err)
 				}
 
@@ -308,7 +274,7 @@ func TestLoadFromFile(t *testing.T) {
   }
 }`
 				filename := "test_real_structure.json"
-				if err := os.WriteFile(filename, []byte(configJSON), 0644); err != nil {
+				if err := os.WriteFile(filename, []byte(configJSON), 0o644); err != nil {
 					t.Fatalf("Failed to write test file: %v", err)
 				}
 
@@ -343,7 +309,7 @@ func TestLoadFromFile(t *testing.T) {
 			setup: func(t *testing.T) string {
 				filename := "test_invalid_json.json"
 				invalidJSON := `{"name": "test", "invalid": json}`
-				if err := os.WriteFile(filename, []byte(invalidJSON), 0644); err != nil {
+				if err := os.WriteFile(filename, []byte(invalidJSON), 0o644); err != nil {
 					t.Fatalf("Failed to write test file: %v", err)
 				}
 				return filename
@@ -360,7 +326,7 @@ func TestLoadFromFile(t *testing.T) {
 					"sourceType": "unknown-source-type",
 				}
 				data, _ := json.Marshal(app)
-				if err := os.WriteFile(filename, data, 0644); err != nil {
+				if err := os.WriteFile(filename, data, 0o644); err != nil {
 					t.Fatalf("Failed to write test file: %v", err)
 				}
 				return filename
@@ -412,7 +378,7 @@ func TestLoadFromFile(t *testing.T) {
 func TestLoadFromFile_ReadError(t *testing.T) {
 	// Create a directory instead of a file to trigger read error
 	dirName := "test_directory"
-	if err := os.Mkdir(dirName, 0755); err != nil {
+	if err := os.Mkdir(dirName, 0o755); err != nil {
 		t.Fatalf("Failed to create test directory: %v", err)
 	}
 	defer os.Remove(dirName)

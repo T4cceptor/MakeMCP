@@ -245,7 +245,7 @@ func TestOpenAPISource_GetToolInputSchema(t *testing.T) {
 		},
 	}
 
-	schema := source.getToolInputSchema("PUT", "/users/{userId}", operation)
+	schema := source.getToolInputSchema(operation)
 
 	// Check schema structure
 	if schema.Type != "object" {

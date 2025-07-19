@@ -2,7 +2,7 @@ class Makemcp < Formula
   desc "CLI tool that creates MCP servers from various sources"
   homepage "https://github.com/T4cceptor/MakeMCP"
   url "https://github.com/T4cceptor/MakeMCP/archive/v#{version}.tar.gz"
-  license "MIT"
+  license "Apache-2.0"
   head "https://github.com/T4cceptor/MakeMCP.git", branch: "main"
 
   depends_on "go" => :build

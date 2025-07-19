@@ -22,7 +22,7 @@ import (
 	"github.com/mark3labs/mcp-go/mcp"
 )
 
-// testSourceParams implements SourceParams for testing
+// testSourceParams implements SourceParams for testing.
 type testSourceParams struct {
 	sharedParams *SharedParams
 	CustomField  string `json:"customField"`
@@ -45,7 +45,7 @@ func (t *testSourceParams) GetSourceType() string {
 	return "test"
 }
 
-// testTool implements MakeMCPTool for testing
+// testTool implements MakeMCPTool for testing.
 type testTool struct {
 	Name        string `json:"name"`
 	Description string `json:"description"`
@@ -197,11 +197,9 @@ func TestUnmarshalConfigWithTypedParams_Success(t *testing.T) {
 			// Verify source params are correctly set
 			if app.SourceParams == nil {
 				t.Error("App.SourceParams is nil")
-			} else {
-				if app.SourceParams.GetSourceType() != tt.wantSource {
-					t.Errorf("App.SourceParams.GetSourceType() = %v, want %v", 
-						app.SourceParams.GetSourceType(), tt.wantSource)
-				}
+			} else if app.SourceParams.GetSourceType() != tt.wantSource {
+				t.Errorf("App.SourceParams.GetSourceType() = %v, want %v",
+					app.SourceParams.GetSourceType(), tt.wantSource)
 			}
 		})
 	}
@@ -387,9 +385,7 @@ func TestUnmarshalConfigWithTypedParams_TypeConversion(t *testing.T) {
 	typedParams, ok := sourceParams.(*testSourceParams)
 	if !ok {
 		t.Errorf("SourceParams is not *testSourceParams, got %T", sourceParams)
-	} else {
-		if typedParams.CustomField != "type-value" {
-			t.Errorf("CustomField = %v, want 'type-value'", typedParams.CustomField)
-		}
+	} else if typedParams.CustomField != "type-value" {
+		t.Errorf("CustomField = %v, want 'type-value'", typedParams.CustomField)
 	}
 }

@@ -24,7 +24,7 @@ import (
 	core "github.com/T4cceptor/MakeMCP/pkg/core"
 )
 
-// OpenAPIParams holds OpenAPI-specific parameters with type safety
+// OpenAPIParams holds OpenAPI-specific parameters with type safety.
 type OpenAPIParams struct {
 	*core.SharedParams
 
@@ -35,7 +35,7 @@ type OpenAPIParams struct {
 	StrictValidate bool   `json:"strictValidate"` // Enable strict OpenAPI validation
 }
 
-// NewOpenAPIParams creates a new OpenAPIParams with default values
+// NewOpenAPIParams creates a new OpenAPIParams with default values.
 func NewOpenAPIParams(sharedParams *core.SharedParams) *OpenAPIParams {
 	return &OpenAPIParams{
 		SharedParams:   sharedParams,
@@ -46,17 +46,17 @@ func NewOpenAPIParams(sharedParams *core.SharedParams) *OpenAPIParams {
 	}
 }
 
-// GetSharedParams returns the shared parameters
+// GetSharedParams returns the shared parameters.
 func (p *OpenAPIParams) GetSharedParams() *core.SharedParams {
 	return p.SharedParams
 }
 
-// GetSourceType returns the source type identifier
+// GetSourceType returns the source type identifier.
 func (p *OpenAPIParams) GetSourceType() string {
 	return "openapi"
 }
 
-// Validate performs OpenAPI-specific parameter validation
+// Validate performs OpenAPI-specific parameter validation.
 func (p *OpenAPIParams) Validate() error {
 	// Validate required fields
 	if p.Specs == "" {
@@ -88,7 +88,7 @@ func (p *OpenAPIParams) Validate() error {
 	return nil
 }
 
-// ToJSON returns a JSON representation for logging and debugging
+// ToJSON returns a JSON representation for logging and debugging.
 func (p *OpenAPIParams) ToJSON() string {
 	jsonBytes, err := json.Marshal(p)
 	if err != nil {
@@ -97,7 +97,7 @@ func (p *OpenAPIParams) ToJSON() string {
 	return string(jsonBytes)
 }
 
-// ParseFromCLIInput creates OpenAPIParams from raw CLI input with type safety
+// ParseFromCLIInput creates OpenAPIParams from raw CLI input with type safety.
 func ParseFromCLIInput(input *core.CLIParamsInput) (*OpenAPIParams, error) {
 	params := NewOpenAPIParams(input.SharedParams)
 

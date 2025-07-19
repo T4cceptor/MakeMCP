@@ -21,10 +21,10 @@ import (
 
 func TestNewSharedParams(t *testing.T) {
 	tests := []struct {
-		name         string
-		sourceType   string
-		transport    TransportType
-		wantType     string
+		name          string
+		sourceType    string
+		transport     TransportType
+		wantType      string
 		wantTransport TransportType
 	}{
 		{
@@ -312,7 +312,7 @@ func TestCLIParamsInput_JSONRoundTrip(t *testing.T) {
 		t.Fatal("SharedParams should not be nil")
 	}
 	if unmarshaled.SharedParams.SourceType != original.SharedParams.SourceType {
-		t.Errorf("SharedParams.SourceType mismatch: got %v, want %v", 
+		t.Errorf("SharedParams.SourceType mismatch: got %v, want %v",
 			unmarshaled.SharedParams.SourceType, original.SharedParams.SourceType)
 	}
 

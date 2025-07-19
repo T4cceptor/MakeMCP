@@ -78,11 +78,7 @@ func (s *OpenAPISource) Parse(params core.SourceParams) (*core.MakeMCPApp, error
 	var tools []core.MakeMCPTool
 	for path, pathItem := range doc.Paths.Map() {
 		for method, operation := range pathItem.Operations() {
-			tool, err := s.createToolFromOperation(method, path, operation, params.ToJSON())
-			if err != nil {
-				log.Printf("Warning: failed to create tool for %s %s: %v", method, path, err)
-				continue
-			}
+			tool := s.createToolFromOperation(method, path, operation)
 			tools = append(tools, &tool)
 		}
 	}
@@ -142,6 +138,7 @@ func (s *OpenAPISource) detectSourceType(openAPISpecLocation string) string {
 	return "file"
 }
 
+// GetSampleTool returns a sample OpenAPI MCP tool for testing and validation.
 func (s *OpenAPISource) GetSampleTool() core.MakeMCPTool {
 	return &OpenAPIMcpTool{}
 }
@@ -171,6 +168,7 @@ func NewOpenAPIHandlerInput(method, path string) OpenAPIHandlerInput {
 	}
 }
 
+// OpenAPIMcpTool represents an MCP tool generated from an OpenAPI operation.
 type OpenAPIMcpTool struct {
 	core.McpTool
 	OpenAPIHandlerInput *OpenAPIHandlerInput `json:"oapiHandlerInput,omitempty"`
@@ -181,19 +179,23 @@ type OpenAPIMcpTool struct {
 	) (*mcp.CallToolResult, error) `json:"-"`
 }
 
+// GetName returns the name of the OpenAPI MCP tool.
 func (o *OpenAPIMcpTool) GetName() string {
 	return o.McpTool.Name
 }
 
+// ToMcpTool returns the core MCP tool representation.
 func (o *OpenAPIMcpTool) ToMcpTool() core.McpTool {
 	return o.McpTool
 }
 
+// ToJSON returns a JSON representation of the OpenAPI MCP tool.
 func (o *OpenAPIMcpTool) ToJSON() string {
 	// TODO
 	return ""
 }
 
+// GetHandler returns the MCP tool handler function for processing requests.
 func (o *OpenAPIMcpTool) GetHandler() func(
 	ctx context.Context,
 	request mcp.CallToolRequest,
@@ -203,9 +205,9 @@ func (o *OpenAPIMcpTool) GetHandler() func(
 }
 
 // createToolFromOperation creates a MakeMCPTool from an OpenAPI operation
-func (s *OpenAPISource) createToolFromOperation(method, path string, operation *openapi3.Operation, specSource string) (OpenAPIMcpTool, error) {
+func (s *OpenAPISource) createToolFromOperation(method, path string, operation *openapi3.Operation) OpenAPIMcpTool {
 	toolName := s.getToolName(method, path, operation)
-	toolInputSchema := s.getToolInputSchema(method, path, operation)
+	toolInputSchema := s.getToolInputSchema(operation)
 	toolAnnotations := s.getToolAnnotations(method, path, operation)
 
 	// Create tool description
@@ -234,10 +236,10 @@ func (s *OpenAPISource) createToolFromOperation(method, path string, operation *
 		},
 	}
 
-	return tool, nil
+	return tool
 }
 
-// getToolName generates a tool name from operation ID or method and path
+// getToolName generates a tool name from operation ID or method and path.
 func (s *OpenAPISource) getToolName(method string, path string, operation *openapi3.Operation) string {
 	toolName := operation.OperationID
 	if toolName == "" {
@@ -254,9 +256,9 @@ func (s *OpenAPISource) getToolName(method string, path string, operation *opena
 	return toolName
 }
 
-// getToolInputSchema creates the input schema for a tool
+// getToolInputSchema creates the input schema for a tool.
 func (s *OpenAPISource) getToolInputSchema(
-	method string, path string, operation *openapi3.Operation,
+	operation *openapi3.Operation,
 ) core.McpToolInputSchema {
 	// TODO: refactor to get rid of mcp dependency
 	genericProps := make(map[string]interface{})
@@ -303,7 +305,7 @@ func (s *OpenAPISource) getToolInputSchema(
 	}
 }
 
-// getToolAnnotations returns tool annotations based on HTTP method and operation
+// getToolAnnotations returns tool annotations based on HTTP method and operation.
 func (s *OpenAPISource) getToolAnnotations(
 	method string, path string, operation *openapi3.Operation,
 ) core.McpToolAnnotation {
@@ -410,7 +412,7 @@ func extractRequestBodyProperties(operation *openapi3.Operation) (map[string]Too
 	return properties, required
 }
 
-// AttachToolHandlers adds tool handler functions to app
+// AttachToolHandlers adds tool handler functions to app.
 func (s *OpenAPISource) AttachToolHandlers(app *core.MakeMCPApp) error {
 	// Type assert to get OpenAPI-specific parameters
 	openAPIParams, ok := app.SourceParams.(*OpenAPIParams)
@@ -422,10 +424,59 @@ func (s *OpenAPISource) AttachToolHandlers(app *core.MakeMCPApp) error {
 	for i, tool := range app.Tools {
 		// TODO: ugly type assertion
 		openApiTool := tool.(*OpenAPIMcpTool)
-		openApiTool.handler = GetHandlerFunction(*openApiTool, apiClient)
+		openApiTool.handler = GetHandlerFunction(openApiTool, apiClient)
 		app.Tools[i] = openApiTool
 	}
 	return nil
+}
+
+// buildRequestURL constructs the full URL with path and query parameters..
+func buildRequestURL(baseURL, path string, params ToolParams, method string) string {
+	pathWithParams := substitutePathParams(path, params.Path)
+	fullURL := baseURL + pathWithParams
+
+	// Add query parameters for GET/DELETE methods
+	if len(params.Query) > 0 && (method == http.MethodGet || method == http.MethodDelete) {
+		encodedQuery := encodeQueryParams(params.Query)
+		if encodedQuery != "" {
+			fullURL = fullURL + "?" + encodedQuery
+		}
+	}
+
+	return fullURL
+}
+
+// buildRequestBody prepares the request body for non-GET/DELETE methods..
+func buildRequestBody(params ToolParams, method string) (io.Reader, error) {
+	if len(params.Body) > 0 && !(method == http.MethodGet || method == http.MethodDelete) {
+		jsonBody, err := json.Marshal(params.Body)
+		if err != nil {
+			return nil, err
+		}
+		return bytes.NewReader(jsonBody), nil
+	}
+	return nil, nil
+}
+
+// setRequestHeaders applies headers and cookies to the HTTP request..
+func setRequestHeaders(req *http.Request, params ToolParams, hasBody bool) {
+	if hasBody {
+		req.Header.Set("Content-Type", "application/json")
+	}
+
+	// Set headers
+	for k, v := range params.Header {
+		req.Header.Set(k, fmt.Sprintf("%v", v))
+	}
+
+	// Set cookies
+	if len(params.Cookie) > 0 {
+		var cookieStrings []string
+		for k, v := range params.Cookie {
+			cookieStrings = append(cookieStrings, fmt.Sprintf("%s=%v", k, v))
+		}
+		req.Header.Set("Cookie", strings.Join(cookieStrings, "; "))
+	}
 }
 
 // GetHandlerFunction creates an MCP tool handler function for an OpenAPI operation.
@@ -465,39 +516,22 @@ func (s *OpenAPISource) AttachToolHandlers(app *core.MakeMCPApp) error {
 //   - HTTP method and final URL
 //   - Response status code
 //   - Response body content
-func GetHandlerFunction(makeMcpTool OpenAPIMcpTool, apiClient *APIClient) func(
+func GetHandlerFunction(makeMcpTool *OpenAPIMcpTool, apiClient *APIClient) func(
 	ctx context.Context,
 	request mcp.CallToolRequest,
 ) (*mcp.CallToolResult, error) {
 	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-
 		// Parse parameters using prefix approach
 		argsRaw := request.GetArguments()
 		params := parsePrefixedParameters(argsRaw)
 
-		// Substitute path parameters
-		pathWithParams := substitutePathParams(makeMcpTool.OpenAPIHandlerInput.Path, params.Path)
-		fullURL := apiClient.BaseURL + pathWithParams
 		method := makeMcpTool.OpenAPIHandlerInput.Method
 
-		// Prepare query parameters and body
-		var bodyReader io.Reader
-
-		// Encode query parameters
-		if len(params.Query) > 0 && (method == http.MethodGet || method == http.MethodDelete) {
-			encodedQuery := encodeQueryParams(params.Query)
-			if encodedQuery != "" {
-				fullURL = fullURL + "?" + encodedQuery
-			}
-		}
-
-		// Prepare body for non-GET/DELETE
-		if len(params.Body) > 0 && !(method == http.MethodGet || method == http.MethodDelete) {
-			jsonBody, err := json.Marshal(params.Body)
-			if err != nil {
-				return nil, err
-			}
-			bodyReader = bytes.NewReader(jsonBody)
+		// Build URL and body using helper functions
+		fullURL := buildRequestURL(apiClient.BaseURL, makeMcpTool.OpenAPIHandlerInput.Path, params, method)
+		bodyReader, err := buildRequestBody(params, method)
+		if err != nil {
+			return nil, err
 		}
 
 		// Create the HTTP request
@@ -505,29 +539,20 @@ func GetHandlerFunction(makeMcpTool OpenAPIMcpTool, apiClient *APIClient) func(
 		if err != nil {
 			return nil, err
 		}
-		if bodyReader != nil {
-			req.Header.Set("Content-Type", "application/json")
-		}
 
-		// Set headers
-		for k, v := range params.Header {
-			req.Header.Set(k, fmt.Sprintf("%v", v))
-		}
+		// Apply headers and cookies using helper function
+		setRequestHeaders(req, params, bodyReader != nil)
 
-		// Set cookies
-		if len(params.Cookie) > 0 {
-			var cookieStrings []string
-			for k, v := range params.Cookie {
-				cookieStrings = append(cookieStrings, fmt.Sprintf("%s=%v", k, v))
-			}
-			req.Header.Set("Cookie", strings.Join(cookieStrings, "; "))
-		}
-
+		// Execute request
 		resp, err := apiClient.HTTPClient.Do(req)
 		if err != nil {
 			return nil, err
 		}
-		defer resp.Body.Close()
+		defer func() {
+			if err := resp.Body.Close(); err != nil {
+				log.Printf("Failed to close response body: %v", err)
+			}
+		}()
 
 		body, err := io.ReadAll(resp.Body)
 		if err != nil {

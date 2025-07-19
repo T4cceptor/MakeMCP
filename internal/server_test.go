@@ -382,14 +382,14 @@ func TestStartServer(t *testing.T) {
 	})
 }
 
-// Helper function for creating bool pointers
+// Helper function for creating bool pointers.
 func boolPtr(b bool) *bool {
 	return &b
 }
 
 // Mock implementations for testing
 
-// MockServerFactory for testing
+// MockServerFactory for testing.
 type MockServerFactory struct {
 	HTTPStartError   error
 	StdioServeError  error
@@ -435,7 +435,7 @@ func (s *mockStdioServer) Stop() error {
 	return nil
 }
 
-// Mock implementation of MakeMCPTool for testing
+// Mock implementation of MakeMCPTool for testing.
 type mockMakeMCPTool struct{}
 
 func (m *mockMakeMCPTool) GetName() string {
