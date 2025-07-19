@@ -17,9 +17,8 @@ package openapi
 import (
 	"testing"
 
-	"github.com/getkin/kin-openapi/openapi3"
-
 	"github.com/T4cceptor/MakeMCP/pkg/config"
+	"github.com/getkin/kin-openapi/openapi3"
 )
 
 func TestOpenAPISource_LoadSpec(t *testing.T) {
@@ -61,7 +60,7 @@ func TestOpenAPISource_LoadSpec(t *testing.T) {
 
 func TestOpenAPISource_Parse(t *testing.T) {
 	source := &OpenAPISource{}
-	params := config.Config{
+	params := config.CLIParams{
 		CliFlags: map[string]any{
 			"specs": "../../../testdata/sample_openapi.json",
 		},
@@ -79,8 +78,8 @@ func TestOpenAPISource_Parse(t *testing.T) {
 	if app.Version == "" {
 		t.Error("Expected non-empty app version")
 	}
-	if app.Config.SourceType != "openapi" {
-		t.Errorf("Expected source type 'openapi', got %s", app.Config.SourceType)
+	if app.CliParams.SourceType != "openapi" {
+		t.Errorf("Expected source type 'openapi', got %s", app.CliParams.SourceType)
 	}
 
 	// Test tools generation
@@ -100,7 +99,7 @@ func TestOpenAPISource_Parse(t *testing.T) {
 	// Check that all expected tools are present
 	toolNames := make(map[string]bool)
 	for _, tool := range app.Tools {
-		toolNames[tool.Name] = true
+		toolNames[tool.GetName()] = true
 	}
 
 	for _, expectedTool := range expectedTools {

@@ -23,19 +23,19 @@ func (p ParameterLocation) IsValid() bool {
 	}
 }
 
-// OpenAPIConfig holds OpenAPI-specific parameters
-type OpenAPIConfig struct {
+// OpenAPIParams holds OpenAPI-specific parameters
+type OpenAPIParams struct {
 	Specs          string `json:"specs"`          // URL to OpenAPI specs
 	BaseURL        string `json:"baseURL"`        // Base URL of the API
 	StrictValidate bool   `json:"strictValidate"` // Enable strict OpenAPI validation
 	Timeout        int    `json:"timeout"`        // HTTP timeout in seconds
 
-	config.Config
+	config.CLIParams
 }
 
 // FromCLIParams extracts OpenAPI-specific parameters from generic CLIParams
-func (p *OpenAPIConfig) FromCLIParams(cliParams *config.Config) error {
-	p.Config = *cliParams
+func (p *OpenAPIParams) FromCLIParams(cliParams *config.CLIParams) error {
+	p.CLIParams = *cliParams
 	if specs, ok := cliParams.CliFlags["specs"].(string); ok {
 		p.Specs = specs
 	}
@@ -53,8 +53,8 @@ func (p *OpenAPIConfig) FromCLIParams(cliParams *config.Config) error {
 	return nil
 }
 
-// SplitParams groups all parameter maps by location for handler logic
-type SplitParams struct {
+// ToolParams groups all parameter maps by location for handler logic
+type ToolParams struct {
 	Path   map[string]any `json:"path"`
 	Query  map[string]any `json:"query"`
 	Header map[string]any `json:"header"`
@@ -63,8 +63,8 @@ type SplitParams struct {
 }
 
 // NewSplitParams returns a SplitParams struct with all maps initialized
-func NewSplitParams() SplitParams {
-	return SplitParams{
+func NewSplitParams() ToolParams {
+	return ToolParams{
 		Path:   map[string]any{},
 		Query:  map[string]any{},
 		Header: map[string]any{},
@@ -73,8 +73,8 @@ func NewSplitParams() SplitParams {
 	}
 }
 
-// AttachParams takes paramList and attaches values to the correct SplitParams fields
-func (params *SplitParams) AttachParams(paramList []map[string]any) {
+// AttachToolParams takes paramList and attaches values to the correct ToolParams fields
+func (params *ToolParams) AttachToolParams(paramList []map[string]any) {
 	for _, param := range paramList {
 		name, _ := param["parameter_name"].(string)
 		value := param["parameter_value"]
@@ -84,7 +84,7 @@ func (params *SplitParams) AttachParams(paramList []map[string]any) {
 			// Invalid parameter location, default to query
 			paramLocation = ParameterLocationQuery
 		}
-		
+
 		switch paramLocation {
 		case ParameterLocationPath:
 			params.Path[name] = value
@@ -102,7 +102,7 @@ func (params *SplitParams) AttachParams(paramList []map[string]any) {
 
 // ToolInputProperty defines a property in the input schema for an MCP tool
 type ToolInputProperty struct {
-	Type        string `json:"type"`
-	Description string `json:"description,omitempty"`
+	Type        string            `json:"type"`
+	Description string            `json:"description,omitempty"`
 	Location    ParameterLocation `json:"location"` // OpenAPI 'in' value: path, query, header, cookie, body, etc.
 }

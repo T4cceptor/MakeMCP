@@ -47,12 +47,16 @@ func (r SourceRegistry) GetAll() map[string]MakeMCPSource {
 	return result
 }
 
+func (r SourceRegistry) Get(name string) MakeMCPSource {
+	return r[name]
+}
+
 // CreateHandlers attaches handler functions to all tools in the MakeMCPApp
 func CreateHandlers(app *config.MakeMCPApp) error {
-	sourceType := app.Config.SourceType
+	sourceType := app.CliParams.SourceType
 	source, exists := (*SourcesRegistry)[sourceType]
 	if !exists {
 		return fmt.Errorf("unknown source type: %s", sourceType)
 	}
-	return source.AttachHandlers(app)
+	return source.AttachToolHandlers(app)
 }

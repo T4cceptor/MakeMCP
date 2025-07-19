@@ -187,7 +187,7 @@ func encodeQueryParams(queryParams map[string]any) string {
 }
 
 // parsePrefixedParameters parses parameters using prefix approach and returns SplitParams
-func parsePrefixedParameters(argsRaw map[string]any) SplitParams {
+func parsePrefixedParameters(argsRaw map[string]any) ToolParams {
 	params := NewSplitParams()
 	for prefixedName, value := range argsRaw {
 		parts := strings.SplitN(prefixedName, "__", 2)
@@ -201,7 +201,7 @@ func parsePrefixedParameters(argsRaw map[string]any) SplitParams {
 			// Invalid parameter location, skip this parameter
 			continue
 		}
-		
+
 		switch paramLocation {
 		case ParameterLocationPath:
 			params.Path[paramName] = value

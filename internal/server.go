@@ -32,12 +32,12 @@ import (
 func StartServer(app *config.MakeMCPApp) error {
 	mcpServer := GetMCPServer(app)
 	// Start the MCP server
-	switch config.TransportType(app.Config.Transport) {
+	switch config.TransportType(app.CliParams.Transport) {
 	case config.TransportTypeHTTP:
 		log.Println("Starting as http MCP server...")
 		streamable_server := server.NewStreamableHTTPServer(mcpServer)
 		return streamable_server.Start(
-			fmt.Sprintf(":%s", app.Config.Port),
+			fmt.Sprintf(":%s", app.CliParams.Port),
 		)
 	case config.TransportTypeStdio:
 		log.Println("Starting as stdio MCP server...")
@@ -59,11 +59,13 @@ func GetMCPServer(app *config.MakeMCPApp) *server.MCPServer {
 	)
 	for i := range app.Tools {
 		tool := &(app.Tools[i])
+		var mcpTool config.McpTool = (*tool).ToMcpTool()
+		handlerFunc := (*tool).GetHandler()
 		mcp_server.AddTool(
-			toMcpGoTool(&tool.McpTool),
-			tool.HandlerFunction,
+			toMcpGoTool(&mcpTool),
+			handlerFunc,
 		)
-		log.Printf("Registered TOOL: %s with func: %p", tool.Name, tool.HandlerFunction)
+		log.Printf("Registered TOOL: %s with func: %p", mcpTool.Name, handlerFunc)
 	}
 	return mcp_server
 }

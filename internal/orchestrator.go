@@ -40,7 +40,7 @@ var defaultFlags []cli.Flag = []cli.Flag{
 	},
 	&cli.BoolFlag{
 		Name:    "config-only",
-		Aliases: []string{"oc"},
+		Aliases: []string{"co"},
 		Value:   false,
 		Usage:   "If set to true only creates a config file and exits, no server will be started.",
 	},
@@ -56,9 +56,12 @@ var defaultFlags []cli.Flag = []cli.Flag{
 	},
 }
 
-// GetCommands returns all CLI commands by auto-discovering from source registry
+// GetCommands returns all CLI commands by combining source and internal commands
 func GetCommands() []*cli.Command {
 	var commands []*cli.Command
+
+	// Add internal commands (config file management)
+	commands = append(commands, GetInternalCommands()...)
 
 	// Auto-discover commands from registered sources
 	for _, source := range sources.SourcesRegistry.GetAll() {
@@ -76,7 +79,7 @@ func GetCommands() []*cli.Command {
 	return commands
 }
 
-func GetInputConfig(source sources.MakeMCPSource, cmd *cli.Command) *config.Config {
+func GetInputConfig(source sources.MakeMCPSource, cmd *cli.Command) *config.CLIParams {
 	cliFlags := map[string]any{}
 	for _, flag := range cmd.Flags {
 		// We only forward flags that are not already in the default flags
@@ -85,19 +88,21 @@ func GetInputConfig(source sources.MakeMCPSource, cmd *cli.Command) *config.Conf
 		}
 	}
 	cliArgs := cmd.Args().Slice()
-	return &config.Config{
-		Transport:  config.TransportType(cmd.String("transport")),
-		ConfigOnly: cmd.Bool("config-only"),
-		Port:       cmd.String("port"),
-		DevMode:    cmd.Bool("dev-mode"),
-		SourceType: source.Name(),
-		CliFlags:   cliFlags,
-		CliArgs:    cliArgs,
+	return &config.CLIParams{
+		BaseCLIParams: config.BaseCLIParams{
+			Transport:  config.TransportType(cmd.String("transport")),
+			ConfigOnly: cmd.Bool("config-only"),
+			Port:       cmd.String("port"),
+			DevMode:    cmd.Bool("dev-mode"),
+			SourceType: source.Name(),
+		},
+		CliFlags: cliFlags,
+		CliArgs:  cliArgs,
 	}
 }
 
 // HandleInput is the main orchestration function that processes CLI params with a source and manages server lifecycle
-func HandleInput(source sources.MakeMCPSource, params *config.Config) error {
+func HandleInput(source sources.MakeMCPSource, params *config.CLIParams) error {
 	log.Printf("Creating config from %s source with params: %s", source.Name(), params.ToJSON())
 
 	// Parse with the source to create MakeMCPApp
@@ -107,18 +112,18 @@ func HandleInput(source sources.MakeMCPSource, params *config.Config) error {
 	}
 
 	// Save configuration
-	if err := config.SaveToFile(app); err != nil {
+	if err := SaveToFile(app); err != nil {
 		return fmt.Errorf("failed to save configuration: %w", err)
 	}
 
 	// Exit if config-only mode
-	if app.Config.ConfigOnly {
+	if app.CliParams.ConfigOnly {
 		log.Println("Configuration file created. Exiting.")
 		return nil
 	}
 
 	// Create and attach handler functions to the app
-	source.AttachHandlers(app)
+	source.AttachToolHandlers(app)
 
 	// Start server
 	return StartServer(app)

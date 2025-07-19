@@ -72,50 +72,25 @@ type McpTool struct {
 	Annotations McpToolAnnotation `json:"annotations"`
 }
 
-// MakeMCPTool extends McpTool with additional MakeMCP information
-type MakeMCPTool struct {
-	// HandlerInput will be provided to tool handler function as-is
-	HandlerInput        map[string]any       `json:"handlerInput,omitempty"`
-	OpenAPIHandlerInput *OpenAPIHandlerInput `json:"oapiHandlerInput,omitempty"`
-
-	// HandlerFunction is the actual function that handles the tool call
-	HandlerFunction func(
+type MakeMCPTool interface {
+	GetName() string
+	GetHandler() func(
 		ctx context.Context,
 		request mcp.CallToolRequest,
-		// TODO: refactor to get rid of mcp dependency
-	) (*mcp.CallToolResult, error) `json:"-"`
-
-	McpTool
-}
-
-// OpenAPIHandlerInput defines how a particular endpoint is to be called
-// TODO: move into OpenAPI source folder
-type OpenAPIHandlerInput struct {
-	Method     string            `json:"method"`
-	Path       string            `json:"path"`
-	Headers    map[string]string `json:"headers"`
-	Cookies    map[string]string `json:"cookies"`
-	BodyAppend map[string]any    `json:"bodyAppend"`
-}
-
-// NewOpenAPIHandlerInput creates a new OpenAPIHandlerInput
-func NewOpenAPIHandlerInput(method, path string) OpenAPIHandlerInput {
-	return OpenAPIHandlerInput{
-		Method:     method,
-		Path:       path,
-		Headers:    make(map[string]string),
-		Cookies:    make(map[string]string),
-		BodyAppend: make(map[string]any),
-	}
+		// TODO: refactor to get rid of mcp-go dependency
+	) (*mcp.CallToolResult, error)
+	ToMcpTool() McpTool
+	ToJSON() string
 }
 
 // MakeMCPApp holds all information about the MCP server
 // Main data structure
 type MakeMCPApp struct {
-	Name    string        `json:"name"`    // Name of the App
-	Version string        `json:"version"` // Version of the app
-	Tools   []MakeMCPTool `json:"tools"`   // Tools the MCP server will provide
-	Config  Config        `json:"config"`
+	Name       string        `json:"name"`       // Name of the App
+	Version    string        `json:"version"`    // Version of the app
+	SourceType string        `json:"sourceType"` // Type of source (openapi, cli, etc.)
+	Tools      []MakeMCPTool `json:"tools"`      // Tools the MCP server will provide
+	CliParams  CLIParams     `json:"config"`
 }
 
 // NewMakeMCPApp creates a new MakeMCPApp with default values
@@ -124,37 +99,46 @@ func NewMakeMCPApp(name, version string, transport TransportType) MakeMCPApp {
 	if !transport.IsValid() {
 		transport = TransportTypeStdio
 	}
-	
+
 	return MakeMCPApp{
-		Name:    name,
-		Version: version,
-		Tools:   []MakeMCPTool{},
-		Config: Config{
-			Transport: transport,
+		Name:       name,
+		Version:    version,
+		SourceType: "", // Will be set by source during parsing
+		Tools:      []MakeMCPTool{},
+		CliParams: CLIParams{
+			BaseCLIParams: BaseCLIParams{
+				Transport: transport,
+			},
 		},
 	}
 }
 
-// Config holds all CLI parameters for the makemcp commands
-type Config struct {
+// BaseCLIParams holds all CLI parameters for the makemcp commands
+type BaseCLIParams struct {
 	// Generic MCP server parameters
 	Transport  TransportType `json:"transport"`  // stdio or http
 	ConfigOnly bool          `json:"configOnly"` // if true, only creates config file
 	Port       string        `json:"port"`       // only valid with transport=http
 	DevMode    bool          `json:"devMode"`    // true if running in development mode - related to security checks
-
-	// Source-specific parameters
-	SourceType string         `json:"type"`  // type of source (openapi, cli, etc.)
-	CliFlags   map[string]any `json:"flags"` // source-specific configuration
-	CliArgs    []string       `json:"args"`
+	SourceType string        `json:"type"`       // type of source (openapi, cli, etc.)
 }
 
-func (c *Config) GetFlag(flag string) any {
+// CLIParams holds all CLI parameters for the makemcp commands
+type CLIParams struct {
+	// Generic MCP server parameters
+	BaseCLIParams
+
+	// Source-specific parameters
+	CliFlags map[string]any `json:"flags"` // source-specific configuration
+	CliArgs  []string       `json:"args"`
+}
+
+func (c *CLIParams) GetFlag(flag string) any {
 	return c.CliFlags[flag]
 }
 
 // ToJSON returns a JSON representation of the CLIParams for logging and debugging
-func (c Config) ToJSON() string {
+func (c CLIParams) ToJSON() string {
 	jsonBytes, err := json.Marshal(c)
 	if err != nil {
 		return `{"error": "failed to marshal CLIParams to JSON"}`

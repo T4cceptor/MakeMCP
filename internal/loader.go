@@ -12,19 +12,23 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package config
+package internal
 
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"path/filepath"
+
+	"github.com/T4cceptor/MakeMCP/pkg/config"
+	"github.com/T4cceptor/MakeMCP/pkg/sources"
 )
 
 // SaveToFile serializes the given MakeMCPApp as JSON and writes it to a file
 // The filename is derived from the MCP server name (e.g., "myserver.makemcp.json")
-func SaveToFile(app *MakeMCPApp) error {
+func SaveToFile(app *config.MakeMCPApp) error {
 	filename := fmt.Sprintf("%s_makemcp.json", app.Name)
 	file, err := os.Create(filename)
 	if err != nil {
@@ -49,20 +53,42 @@ func SaveToFile(app *MakeMCPApp) error {
 }
 
 // LoadFromFile loads a MakeMCPApp from a JSON file
-func LoadFromFile(filename string) (*MakeMCPApp, error) {
-	var app MakeMCPApp
-
+func LoadFromFile(filename string) (*config.MakeMCPApp, error) {
 	file, err := os.Open(filename)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open file: %w", err)
 	}
 	defer file.Close()
 
-	decoder := json.NewDecoder(file)
-	if err := decoder.Decode(&app); err != nil {
-		return nil, fmt.Errorf("failed to decode JSON: %w", err)
+	// Read all data first
+	data, err := io.ReadAll(file)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read file: %w", err)
 	}
 
+	// Parse just the metadata to get source type
+	var metadata struct {
+		SourceType string `json:"sourceType"`
+	}
+	if err := json.Unmarshal(data, &metadata); err != nil {
+		return nil, fmt.Errorf("failed to decode metadata: %w", err)
+	}
+
+	// Get source from registry
+	source := sources.SourcesRegistry.Get(metadata.SourceType)
+	if source == nil {
+		return nil, fmt.Errorf("unknown source type: %s", metadata.SourceType)
+	}
+
+	// Use source's UnmarshalConfig method directly
+	// Note: Sources need to implement UnmarshalConfig method
+	app, err := source.UnmarshalConfig(data)
+	if err != nil {
+		return nil, fmt.Errorf("failed to unmarshal config: %w", err)
+	}
+
+	source.AttachToolHandlers(app)
+
 	log.Printf("MakeMCPApp loaded from %s\n", filename)
-	return &app, nil
+	return app, nil
 }

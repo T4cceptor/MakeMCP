@@ -40,9 +40,9 @@ func (s *OpenAPISource) Name() string {
 }
 
 // Parse converts an OpenAPI specification into a MakeMCPApp configuration
-func (s *OpenAPISource) Parse(params *config.Config) (*config.MakeMCPApp, error) {
+func (s *OpenAPISource) Parse(params *config.CLIParams) (*config.MakeMCPApp, error) {
 	// Extract OpenAPI-specific parameters
-	var openAPIParams OpenAPIConfig
+	var openAPIParams OpenAPIParams
 	if err := openAPIParams.FromCLIParams(params); err != nil {
 		return nil, fmt.Errorf("failed to parse OpenAPI parameters: %w", err)
 	}
@@ -52,8 +52,9 @@ func (s *OpenAPISource) Parse(params *config.Config) (*config.MakeMCPApp, error)
 		WarnURLSecurity(openAPIParams.Specs, "OpenAPI spec", false)
 		WarnURLSecurity(openAPIParams.BaseURL, "Base URL", false)
 	}
-	app := config.NewMakeMCPApp("", "", openAPIParams.Transport)
-	app.Config = openAPIParams.Config
+	app := config.NewMakeMCPApp("", "", openAPIParams.CLIParams.Transport)
+	app.SourceType = s.Name() // Set source type
+	app.CliParams = openAPIParams.CLIParams
 	// both are useful, but it raises dependency concerns
 
 	// Load the OpenAPI specification
@@ -79,7 +80,7 @@ func (s *OpenAPISource) Parse(params *config.Config) (*config.MakeMCPApp, error)
 				log.Printf("Warning: failed to create tool for %s %s: %v", method, path, err)
 				continue
 			}
-			tools = append(tools, tool)
+			tools = append(tools, &tool)
 		}
 	}
 
@@ -138,8 +139,68 @@ func (s *OpenAPISource) detectSourceType(openAPISpecLocation string) string {
 	return "file"
 }
 
+func (s *OpenAPISource) GetSampleTool() config.MakeMCPTool {
+	return &OpenAPIMcpTool{}
+}
+
+// UnmarshalConfig reconstructs a MakeMCPApp from JSON data for the load command
+func (s *OpenAPISource) UnmarshalConfig(data []byte) (*config.MakeMCPApp, error) {
+	return config.UnmarshalConfigWithTools[*OpenAPIMcpTool](data)
+}
+
+// OpenAPIHandlerInput defines how a particular endpoint is to be called
+type OpenAPIHandlerInput struct {
+	Method     string            `json:"method"`
+	Path       string            `json:"path"`
+	Headers    map[string]string `json:"headers"`
+	Cookies    map[string]string `json:"cookies"`
+	BodyAppend map[string]any    `json:"bodyAppend"`
+}
+
+// NewOpenAPIHandlerInput creates a new OpenAPIHandlerInput
+func NewOpenAPIHandlerInput(method, path string) OpenAPIHandlerInput {
+	return OpenAPIHandlerInput{
+		Method:     method,
+		Path:       path,
+		Headers:    make(map[string]string),
+		Cookies:    make(map[string]string),
+		BodyAppend: make(map[string]any),
+	}
+}
+
+type OpenAPIMcpTool struct {
+	config.McpTool
+	OpenAPIHandlerInput *OpenAPIHandlerInput `json:"oapiHandlerInput,omitempty"`
+	handler             func(
+		ctx context.Context,
+		request mcp.CallToolRequest,
+		// TODO: refactor to get rid of mcp-go dependency
+	) (*mcp.CallToolResult, error) `json:"-"`
+}
+
+func (o *OpenAPIMcpTool) GetName() string {
+	return o.McpTool.Name
+}
+
+func (o *OpenAPIMcpTool) ToMcpTool() config.McpTool {
+	return o.McpTool
+}
+
+func (o *OpenAPIMcpTool) ToJSON() string {
+	// TODO
+	return ""
+}
+
+func (o *OpenAPIMcpTool) GetHandler() func(
+	ctx context.Context,
+	request mcp.CallToolRequest,
+	// TODO: refactor to get rid of mcp-go dependency
+) (*mcp.CallToolResult, error) {
+	return o.handler
+}
+
 // createToolFromOperation creates a MakeMCPTool from an OpenAPI operation
-func (s *OpenAPISource) createToolFromOperation(method, path string, operation *openapi3.Operation, specSource string) (config.MakeMCPTool, error) {
+func (s *OpenAPISource) createToolFromOperation(method, path string, operation *openapi3.Operation, specSource string) (OpenAPIMcpTool, error) {
 	toolName := s.getToolName(method, path, operation)
 	toolInputSchema := s.getToolInputSchema(method, path, operation)
 	toolAnnotations := s.getToolAnnotations(method, path, operation)
@@ -154,14 +215,14 @@ func (s *OpenAPISource) createToolFromOperation(method, path string, operation *
 	}
 
 	// Create the tool
-	tool := config.MakeMCPTool{
+	tool := OpenAPIMcpTool{
 		McpTool: config.McpTool{
 			Name:        toolName,
 			Description: description,
 			InputSchema: toolInputSchema,
 			Annotations: toolAnnotations,
 		},
-		OpenAPIHandlerInput: &config.OpenAPIHandlerInput{
+		OpenAPIHandlerInput: &OpenAPIHandlerInput{
 			Method:     method,
 			Path:       path,
 			Headers:    make(map[string]string),
@@ -346,13 +407,18 @@ func extractRequestBodyProperties(operation *openapi3.Operation) (map[string]Too
 	return properties, required
 }
 
-// AttachHandlers adds tool handler functions to app
-func (s *OpenAPISource) AttachHandlers(app *config.MakeMCPApp) error {
-	baseUrl := app.Config.GetFlag(baseUrlCommand.Name).(string)
-	timeout := app.Config.GetFlag(timeoutCommand.Name).(int)
+// AttachToolHandlers adds tool handler functions to app
+func (s *OpenAPISource) AttachToolHandlers(app *config.MakeMCPApp) error {
+	baseUrl := app.CliParams.GetFlag(baseUrlCommand.Name).(string)
+	// JSON technically only knows "number", which is parsed as float64
+	// since timeout is supposed to be in seconds, we just cast it here
+	timeout := int(app.CliParams.GetFlag("timeout").(float64))
 	apiClient := NewAPIClient(baseUrl, timeout)
-	for i := range app.Tools {
-		app.Tools[i].HandlerFunction = GetHandlerFunction(app.Tools[i], apiClient)
+	for i, tool := range app.Tools {
+		// TODO: ugly type assertion
+		openApiTool := tool.(*OpenAPIMcpTool)
+		openApiTool.handler = GetHandlerFunction(*openApiTool, apiClient)
+		app.Tools[i] = openApiTool
 	}
 	return nil
 }
@@ -394,7 +460,7 @@ func (s *OpenAPISource) AttachHandlers(app *config.MakeMCPApp) error {
 //   - HTTP method and final URL
 //   - Response status code
 //   - Response body content
-func GetHandlerFunction(makeMcpTool config.MakeMCPTool, apiClient *APIClient) func(
+func GetHandlerFunction(makeMcpTool OpenAPIMcpTool, apiClient *APIClient) func(
 	ctx context.Context,
 	request mcp.CallToolRequest,
 ) (*mcp.CallToolResult, error) {

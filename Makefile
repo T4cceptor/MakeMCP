@@ -67,6 +67,9 @@ local-config-test: ## Test config generation with local server
 
 local-test: local-config-test ## Alias for local-config-test
 
+load-fastapi: build ## Load and run FastAPI config
+	./$(BUILD_DIR)/$(BINARY_NAME) load FastAPI_makemcp.json
+
 # Cross-compilation targets
 build-all: ## Build for all platforms
 	@echo "Building for all platforms..."
