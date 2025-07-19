@@ -32,22 +32,82 @@ The current implementation focuses on OpenAPI specifications as a well-defined s
 
 ## Build and Development
 
-### Build Commands
+### Makefile Commands
+The project includes a comprehensive Makefile with automation for common tasks:
+
+**Primary Commands:**
 ```bash
-# Build the binary
-go build -o makemcp .
+# Build the binary (recommended)
+make build
+
+# Build and run with help
+make run
+
+# Clean build artifacts
+make clean
+
+# Run tests
+make test
+
+# Full development workflow (clean, format, vet, test, build)
+make dev
+```
+
+**Code Quality:**
+```bash
+# Format code
+make fmt
+
+# Run linter (requires golangci-lint)
+make lint
+
+# Run go vet
+make vet
+
+# Tidy dependencies
+make tidy
+
+# Install development dependencies
+make dev-deps
+```
+
+**Cross-Platform Building:**
+```bash
+# Build for all platforms (Linux, macOS, Windows)
+make build-all
+
+# Prepare release builds
+make release
+```
+
+**Testing Commands:**
+```bash
+# Test config generation with local server
+make local-config-test
+
+# Alias for local-config-test
+make local-test
+```
+
+### Manual Build Commands
+```bash
+# Build the binary manually
+go build -o makemcp cmd/makemcp.go
 
 # Run directly
-go run . [commands]
+go run cmd/makemcp.go [commands]
 ```
 
 ### Testing the CLI
 ```bash
 # Show help
-./makemcp --help
+./build/makemcp --help
 
-# Test OpenAPI integration (config only)
-makemcp openapi -s 'http://localhost:8081/openapi.json' -b "http://localhost:8081" --config-only true
+# Test OpenAPI integration (config only) - use Makefile command
+make local-test
+
+# Manual test of OpenAPI integration
+./build/makemcp openapi -s 'http://localhost:8081/openapi.json' -b "http://localhost:8081" --config-only true
 ```
 
 ## Key Architecture Patterns

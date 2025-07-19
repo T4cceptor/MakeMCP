@@ -1,8 +1,12 @@
 # tmp folder
 tmp/
 
+# test coverage files
+coverage*
+
 # makemcp & config files
 *.makemcp.json
+*makemcp.json
 makemcp
 
 # Personal VS Code MCP configuration

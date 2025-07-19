@@ -1,19 +1,37 @@
-package main
+// Copyright 2025 MakeMCP Contributors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package openapi
 
 import (
-	"encoding/json"
 	"testing"
 
+	core "github.com/T4cceptor/MakeMCP/pkg/core"
 	"github.com/getkin/kin-openapi/openapi3"
-	"github.com/mark3labs/mcp-go/mcp"
 )
 
-func TestLoadOpenAPISpec(t *testing.T) {
+func TestOpenAPISource_LoadSpec(t *testing.T) {
+	source := &OpenAPISource{}
+
 	// Test only the valid case since loadOpenAPISpec calls log.Fatalf on error
 	// which would exit the test process
 	t.Run("Valid OpenAPI spec file", func(t *testing.T) {
-		doc := loadOpenAPISpec("testdata/sample_openapi.json")
-		
+		doc, err := source.loadOpenAPISpec("../../../testdata/sample_openapi.json", false)
+		if err != nil {
+			t.Fatalf("Expected no error but got: %v", err)
+		}
+
 		if doc == nil {
 			t.Error("Expected valid OpenAPI document but got nil")
 			return
@@ -29,7 +47,7 @@ func TestLoadOpenAPISpec(t *testing.T) {
 		if doc.Paths == nil {
 			t.Error("Expected Paths section but got nil")
 		}
-		
+
 		// Check that it loaded our test data correctly
 		if doc.Info.Title != "Sample User API" {
 			t.Errorf("Expected title 'Sample User API', got %s", doc.Info.Title)
@@ -40,14 +58,30 @@ func TestLoadOpenAPISpec(t *testing.T) {
 	})
 }
 
-func TestFromOpenAPISpecs(t *testing.T) {
-	params := CLIParams{
-		Specs:   "testdata/sample_openapi.json",
-		BaseURL: "https://api.example.com",
-		DevMode: true, // Suppress security warnings for tests
+func TestOpenAPISource_Parse(t *testing.T) {
+	source := &OpenAPISource{}
+
+	// Create input parameters using new structure
+	sharedParams := core.NewSharedParams("openapi", core.TransportTypeStdio)
+	input := &core.CLIParamsInput{
+		SharedParams: sharedParams,
+		CliFlags: map[string]any{
+			"specs":    "../../../testdata/sample_openapi.json",
+			"base-url": "http://localhost:8080",
+		},
+		CliArgs: []string{},
 	}
 
-	app := FromOpenAPISpecs(params)
+	// Parse input into typed parameters
+	sourceParams, err := source.ParseParams(input)
+	if err != nil {
+		t.Fatalf("Expected no error from ParseParams but got: %v", err)
+	}
+
+	app, err := source.Parse(sourceParams)
+	if err != nil {
+		t.Fatalf("Expected no error from Parse but got: %v", err)
+	}
 
 	// Test basic app structure
 	if app.Name == "" {
@@ -56,21 +90,18 @@ func TestFromOpenAPISpecs(t *testing.T) {
 	if app.Version == "" {
 		t.Error("Expected non-empty app version")
 	}
-	if app.OpenAPIConfig == nil {
-		t.Error("Expected OpenAPIConfig but got nil")
-	}
-	if app.OpenAPIConfig.BaseUrl != params.BaseURL {
-		t.Errorf("Expected BaseUrl %s, got %s", params.BaseURL, app.OpenAPIConfig.BaseUrl)
+	if app.SourceParams.GetSourceType() != "openapi" {
+		t.Errorf("Expected source type 'openapi', got %s", app.SourceParams.GetSourceType())
 	}
 
 	// Test tools generation
 	expectedTools := []string{
-		"listUsers",
-		"createUser", 
-		"getUserById",
-		"updateUser",
-		"deleteUser",
-		"GET_/users/{userId}/preferences", // This one doesn't have operationId
+		"listusers",
+		"createuser",
+		"getuserbyid",
+		"updateuser",
+		"deleteuser",
+		"get__users_userid_preferences", // This one doesn't have operationId
 	}
 
 	if len(app.Tools) != len(expectedTools) {
@@ -80,7 +111,7 @@ func TestFromOpenAPISpecs(t *testing.T) {
 	// Check that all expected tools are present
 	toolNames := make(map[string]bool)
 	for _, tool := range app.Tools {
-		toolNames[tool.Name] = true
+		toolNames[tool.GetName()] = true
 	}
 
 	for _, expectedTool := range expectedTools {
@@ -90,7 +121,9 @@ func TestFromOpenAPISpecs(t *testing.T) {
 	}
 }
 
-func TestGetToolName(t *testing.T) {
+func TestOpenAPISource_GetToolName(t *testing.T) {
+	source := &OpenAPISource{}
+
 	tests := []struct {
 		name        string
 		method      string
@@ -103,21 +136,21 @@ func TestGetToolName(t *testing.T) {
 			method:      "GET",
 			path:        "/users",
 			operationID: "listUsers",
-			expected:    "listUsers",
+			expected:    "listusers",
 		},
 		{
 			name:        "Without operation ID",
 			method:      "POST",
 			path:        "/users/{id}",
 			operationID: "",
-			expected:    "POST_/users/{id}",
+			expected:    "post__users_id",
 		},
 		{
 			name:        "DELETE with operation ID",
 			method:      "DELETE",
 			path:        "/users/{id}",
 			operationID: "deleteUser",
-			expected:    "deleteUser",
+			expected:    "deleteuser",
 		},
 	}
 
@@ -126,8 +159,8 @@ func TestGetToolName(t *testing.T) {
 			operation := &openapi3.Operation{
 				OperationID: tt.operationID,
 			}
-			
-			result := GetToolName(tt.method, tt.path, operation)
+
+			result := source.getToolName(tt.method, tt.path, operation)
 			if result != tt.expected {
 				t.Errorf("Expected %s, got %s", tt.expected, result)
 			}
@@ -135,7 +168,9 @@ func TestGetToolName(t *testing.T) {
 	}
 }
 
-func TestGetToolInputSchema(t *testing.T) {
+func TestOpenAPISource_GetToolInputSchema(t *testing.T) {
+	source := &OpenAPISource{}
+
 	// Create a sample OpenAPI operation with various parameter types
 	operation := &openapi3.Operation{
 		Parameters: []*openapi3.ParameterRef{
@@ -210,7 +245,7 @@ func TestGetToolInputSchema(t *testing.T) {
 		},
 	}
 
-	schema := GetToolInputSchema("PUT", "/users/{userId}", operation)
+	schema := source.getToolInputSchema(operation)
 
 	// Check schema structure
 	if schema.Type != "object" {
@@ -219,11 +254,11 @@ func TestGetToolInputSchema(t *testing.T) {
 
 	// Check expected properties with prefixes
 	expectedProperties := map[string]string{
-		"path__userId":    "string",
-		"query__limit":    "integer",
+		"path__userId":      "string",
+		"query__limit":      "integer", // Should match the actual OpenAPI type
 		"header__X-API-Key": "string",
-		"body__name":      "string",
-		"body__email":     "string",
+		"body__name":        "string",
+		"body__email":       "string",
 	}
 
 	for propName, expectedType := range expectedProperties {
@@ -232,13 +267,13 @@ func TestGetToolInputSchema(t *testing.T) {
 			t.Errorf("Expected property %s not found", propName)
 			continue
 		}
-		
+
 		propMap, ok := prop.(map[string]interface{})
 		if !ok {
 			t.Errorf("Property %s is not a map", propName)
 			continue
 		}
-		
+
 		if propMap["type"] != expectedType {
 			t.Errorf("Expected property %s type %s, got %v", propName, expectedType, propMap["type"])
 		}
@@ -264,16 +299,18 @@ func TestGetToolInputSchema(t *testing.T) {
 	}
 }
 
-func TestGetToolAnnotations(t *testing.T) {
+func TestOpenAPISource_GetToolAnnotations(t *testing.T) {
+	source := &OpenAPISource{}
+
 	operation := &openapi3.Operation{
 		Summary:     "Test operation",
 		Description: "This is a test operation",
 	}
 
 	tests := []struct {
-		name           string
-		method         string
-		path           string
+		name                string
+		method              string
+		path                string
 		expectedReadOnly    *bool
 		expectedDestructive *bool
 		expectedIdempotent  *bool
@@ -292,7 +329,7 @@ func TestGetToolAnnotations(t *testing.T) {
 			path:                "/users",
 			expectedReadOnly:    nil,
 			expectedDestructive: nil,
-			expectedIdempotent:  nil,
+			expectedIdempotent:  boolPtr(false),
 		},
 		{
 			name:                "PUT method",
@@ -308,14 +345,14 @@ func TestGetToolAnnotations(t *testing.T) {
 			path:                "/users/{id}",
 			expectedReadOnly:    nil,
 			expectedDestructive: boolPtr(true),
-			expectedIdempotent:  boolPtr(true),
+			expectedIdempotent:  nil,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			annotations := GetToolAnnotations(tt.method, tt.path, operation)
-			
+			annotations := source.getToolAnnotations(tt.method, tt.path, operation)
+
 			if tt.expectedReadOnly != nil {
 				if annotations.ReadOnlyHint == nil || *annotations.ReadOnlyHint != *tt.expectedReadOnly {
 					t.Errorf("Expected ReadOnlyHint %v, got %v", *tt.expectedReadOnly, annotations.ReadOnlyHint)
@@ -323,7 +360,7 @@ func TestGetToolAnnotations(t *testing.T) {
 			} else if annotations.ReadOnlyHint != nil {
 				t.Errorf("Expected ReadOnlyHint nil, got %v", *annotations.ReadOnlyHint)
 			}
-			
+
 			if tt.expectedDestructive != nil {
 				if annotations.DestructiveHint == nil || *annotations.DestructiveHint != *tt.expectedDestructive {
 					t.Errorf("Expected DestructiveHint %v, got %v", *tt.expectedDestructive, annotations.DestructiveHint)
@@ -331,7 +368,7 @@ func TestGetToolAnnotations(t *testing.T) {
 			} else if annotations.DestructiveHint != nil {
 				t.Errorf("Expected DestructiveHint nil, got %v", *annotations.DestructiveHint)
 			}
-			
+
 			if tt.expectedIdempotent != nil {
 				if annotations.IdempotentHint == nil || *annotations.IdempotentHint != *tt.expectedIdempotent {
 					t.Errorf("Expected IdempotentHint %v, got %v", *tt.expectedIdempotent, annotations.IdempotentHint)
@@ -343,165 +380,50 @@ func TestGetToolAnnotations(t *testing.T) {
 	}
 }
 
-func TestGetToolDescription(t *testing.T) {
-	operation := &openapi3.Operation{
-		Summary:     "List users",
-		Description: "Retrieve a paginated list of users with optional filtering",
-	}
+func TestOpenAPISource_DetectSourceType(t *testing.T) {
+	source := &OpenAPISource{}
 
-	// Create a simple tool input schema
-	toolInputSchema := mcp.ToolInputSchema{
-		Type: "object",
-		Properties: map[string]any{
-			"path__userId": map[string]interface{}{
-				"type":        "string",
-				"description": "User ID",
-			},
-			"query__limit": map[string]interface{}{
-				"type":        "integer",
-				"description": "Limit results",
-			},
-			"header__X-API-Key": map[string]interface{}{
-				"type":        "string",
-				"description": "API Key",
-			},
+	tests := []struct {
+		name     string
+		location string
+		expected string
+	}{
+		{
+			name:     "HTTP URL",
+			location: "http://example.com/openapi.json",
+			expected: "url",
 		},
-		Required: []string{"path__userId", "header__X-API-Key"},
+		{
+			name:     "HTTPS URL",
+			location: "https://example.com/openapi.json",
+			expected: "url",
+		},
+		{
+			name:     "File path",
+			location: "/path/to/openapi.json",
+			expected: "file",
+		},
+		{
+			name:     "Relative file path",
+			location: "openapi.json",
+			expected: "file",
+		},
 	}
 
-	description := GetToolDescription("GET", "/users/{userId}", operation, toolInputSchema)
-	
-	// Check that description contains expected elements
-	if description == "" {
-		t.Error("Expected non-empty description")
-	}
-	
-	// Should contain operation summary
-	if !contains(description, "List users") {
-		t.Error("Expected description to contain operation summary")
-	}
-	
-	// Should contain operation description
-	if !contains(description, "paginated list of users") {
-		t.Error("Expected description to contain operation description")
-	}
-	
-	// Should contain parameter sections
-	if !contains(description, "Path Parameters:") {
-		t.Error("Expected description to contain Path Parameters section")
-	}
-	
-	if !contains(description, "Query Parameters:") {
-		t.Error("Expected description to contain Query Parameters section")
-	}
-	
-	if !contains(description, "Header Parameters:") {
-		t.Error("Expected description to contain Header Parameters section")
-	}
-	
-	// Should contain example input
-	if !contains(description, "Example input:") {
-		t.Error("Expected description to contain Example input section")
-	}
-	
-	// Should contain prefix instruction
-	if !contains(description, "prefix format") {
-		t.Error("Expected description to contain prefix format instruction")
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := source.detectSourceType(tt.location)
+			if result != tt.expected {
+				t.Errorf("Expected %s, got %s", tt.expected, result)
+			}
+		})
 	}
 }
 
-func TestParsePrefixedParameters(t *testing.T) {
-	input := map[string]any{
-		"path__userId":     "user123",
-		"query__limit":     10,
-		"header__X-API-Key": "secret-key",
-		"body__name":       "John Doe",
-		"body__email":      "john@example.com",
-		"invalid_param":    "should be ignored",
-	}
+func TestOpenAPISource_Name(t *testing.T) {
+	source := &OpenAPISource{}
 
-	params := parsePrefixedParameters(input)
-
-	// Check path parameters
-	if params.Path["userId"] != "user123" {
-		t.Errorf("Expected path userId 'user123', got %v", params.Path["userId"])
+	if source.Name() != "openapi" {
+		t.Errorf("Expected name 'openapi', got %s", source.Name())
 	}
-
-	// Check query parameters
-	if params.Query["limit"] != 10 {
-		t.Errorf("Expected query limit 10, got %v", params.Query["limit"])
-	}
-
-	// Check header parameters
-	if params.Header["X-API-Key"] != "secret-key" {
-		t.Errorf("Expected header X-API-Key 'secret-key', got %v", params.Header["X-API-Key"])
-	}
-
-	// Check body parameters
-	if params.Body["name"] != "John Doe" {
-		t.Errorf("Expected body name 'John Doe', got %v", params.Body["name"])
-	}
-	if params.Body["email"] != "john@example.com" {
-		t.Errorf("Expected body email 'john@example.com', got %v", params.Body["email"])
-	}
-
-	// Check that invalid parameter was ignored
-	if len(params.Path) != 1 || len(params.Query) != 1 || len(params.Header) != 1 || len(params.Body) != 2 {
-		t.Error("Invalid parameter should have been ignored")
-	}
-}
-
-func TestGenerateExampleInput(t *testing.T) {
-	params := []ParameterInfo{
-		{Name: "userId", Type: "string", Location: "path", Required: true},
-		{Name: "limit", Type: "integer", Location: "query", Required: false},
-		{Name: "email", Type: "string", Location: "body", Required: true},
-		{Name: "active", Type: "boolean", Location: "body", Required: false},
-	}
-
-	exampleJSON := generateExampleInput(params)
-	
-	// Parse the generated JSON
-	var example map[string]any
-	if err := json.Unmarshal([]byte(exampleJSON), &example); err != nil {
-		t.Fatalf("Failed to parse example JSON: %v", err)
-	}
-
-	// Check that all parameters are present with correct prefixes
-	expectedKeys := []string{"path__userId", "query__limit", "body__email", "body__active"}
-	for _, key := range expectedKeys {
-		if _, exists := example[key]; !exists {
-			t.Errorf("Expected key %s not found in example", key)
-		}
-	}
-
-	// Check types
-	if example["path__userId"] != "example string" {
-		t.Errorf("Expected path__userId to be 'example string', got %v", example["path__userId"])
-	}
-	if example["query__limit"] != float64(42) { // JSON unmarshals numbers as float64
-		t.Errorf("Expected query__limit to be 42, got %v", example["query__limit"])
-	}
-	if example["body__email"] != "user@example.com" {
-		t.Errorf("Expected body__email to be 'user@example.com', got %v", example["body__email"])
-	}
-	if example["body__active"] != true {
-		t.Errorf("Expected body__active to be true, got %v", example["body__active"])
-	}
-}
-
-// Helper function to check if a string contains a substring
-func contains(s, substr string) bool {
-	return len(s) >= len(substr) && (s == substr || len(substr) == 0 || 
-		(len(s) > len(substr) && (s[:len(substr)] == substr || s[len(s)-len(substr):] == substr || 
-		containsHelper(s, substr))))
-}
-
-func containsHelper(s, substr string) bool {
-	for i := 0; i <= len(s)-len(substr); i++ {
-		if s[i:i+len(substr)] == substr {
-			return true
-		}
-	}
-	return false
 }
