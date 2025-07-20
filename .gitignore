@@ -4,6 +4,8 @@ tmp/
 # test coverage files
 coverage*
 
+/**/test.db
+
 # makemcp & config files
 *.makemcp.json
 *makemcp.json
