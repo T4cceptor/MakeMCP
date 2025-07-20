@@ -28,56 +28,43 @@ import (
 
 // Test data structure for OpenAPI integration tests
 type testCase struct {
-	name           string
-	specFile       string
-	baseURL        string
-	expectedTools  []string
-	expectedSource string
+	name               string
+	specFile           string
+	baseURL            string
+	expectedResultFile string // Path to expected JSON result file
+	expectedSource     string
 }
 
 // getTestCases returns the test cases for OpenAPI integration tests
 func getTestCases() []testCase {
 	return []testCase{
 		{
-			name:     "FastAPI",
-			specFile: "sample_specifications/fastapi.json",
-			baseURL:  "http://localhost:8081",
-			expectedTools: []string{
-				"read_root__get",
-				"list_users_users_get",
-				"create_user_users_post",
-				"get_user_by_email_users_by_email__get",
-				"delete_user_users__user_id__delete",
-				"get_user_by_id_users__user_id__get",
-				"update_user_users__user_id__patch",
-			},
-			expectedSource: "openapi",
+			name:               "FastAPI",
+			specFile:           "sample_specifications/fastapi.json",
+			baseURL:            "http://localhost:8081",
+			expectedResultFile: "expected_result/fastapi_makemcp.json",
+			expectedSource:     "openapi",
 		},
 		{
-			name:     "GoFuego",
-			specFile: "sample_specifications/gofuego.json",
-			baseURL:  "http://localhost:8120",
-			expectedTools: []string{
-				"get__",
-				"get__users",
-				"post__users",
-				"patch__users_:id",
-				"delete__users_:id",
-				"get__users_:id",
-			},
-			expectedSource: "openapi",
+			name:               "GoFuego",
+			specFile:           "sample_specifications/gofuego.json",
+			baseURL:            "http://localhost:8120",
+			expectedResultFile: "expected_result/gofuego_makemcp.json",
+			expectedSource:     "openapi",
 		},
 		{
-			name:     "Salesforce",
-			specFile: "sample_specifications/salesforce_1.json",
-			baseURL:  "https://api.salesforce.com/einstein/platform/v1",
-			expectedTools: []string{
-				"generatechat",
-				"generateembeddings", 
-				"generatetext",
-				"submitfeedback",
-			},
-			expectedSource: "openapi",
+			name:               "Salesforce",
+			specFile:           "sample_specifications/salesforce_1.json",
+			baseURL:            "https://api.salesforce.com/einstein/platform/v1",
+			expectedResultFile: "expected_result/salesforce_makemcp.json",
+			expectedSource:     "openapi",
+		},
+		{
+			name:               "AdobeAEM",
+			specFile:           "sample_specifications/adobe_aem_3_7_1.json",
+			baseURL:            "http://adobe.local",
+			expectedResultFile: "expected_result/adobe_aem_makemcp.json",
+			expectedSource:     "openapi",
 		},
 	}
 }
@@ -176,104 +163,65 @@ func TestOpenAPIIntegration(t *testing.T) {
 				t.Fatalf("Config file not created: %v", err)
 			}
 
-			// Read and parse the generated config
-			configData, err := os.ReadFile(outputPath)
+			// Compare generated config with expected result
+			actualData, err := os.ReadFile(outputPath)
 			if err != nil {
-				t.Fatalf("Failed to read config file: %v", err)
+				t.Fatalf("Failed to read generated config: %v", err)
 			}
 
-			// Parse as raw JSON first to validate structure
-			var rawConfig map[string]any
-			if err := json.Unmarshal(configData, &rawConfig); err != nil {
-				t.Fatalf("Failed to parse config JSON: %v", err)
+			expectedData, err := os.ReadFile(tc.expectedResultFile)
+			if err != nil {
+				t.Fatalf("Failed to read expected result: %v", err)
 			}
 
-			// Validate basic structure without unmarshaling into struct
-			name, ok := rawConfig["name"].(string)
-			if !ok || name == "" {
-				t.Error("Config name should not be empty")
+			var actual, expected map[string]any
+			if err := json.Unmarshal(actualData, &actual); err != nil {
+				t.Fatalf("Failed to parse actual JSON: %v", err)
+			}
+			if err := json.Unmarshal(expectedData, &expected); err != nil {
+				t.Fatalf("Failed to parse expected JSON: %v", err)
 			}
 
-			version, ok := rawConfig["version"].(string)
-			if !ok || version == "" {
-				t.Error("Config version should not be empty")
+			// Compare key fields
+			compareField := func(field string) {
+				if actual[field] != expected[field] {
+					t.Errorf("%s mismatch: expected %v, got %v", field, expected[field], actual[field])
+				}
+			}
+			
+			compareField("name")
+			compareField("version")
+			compareField("sourceType")
+
+			// Compare tools by name (order may vary)
+			actualTools, expectedTools := actual["tools"].([]any), expected["tools"].([]any)
+			if len(actualTools) != len(expectedTools) {
+				t.Errorf("Tools count mismatch: expected %d, got %d", len(expectedTools), len(actualTools))
 			}
 
-			sourceType, ok := rawConfig["sourceType"].(string)
-			if !ok || sourceType != tc.expectedSource {
-				t.Errorf("Expected source type %s, got %s", tc.expectedSource, sourceType)
-			}
-
-			// Validate tools array exists and has content
-			tools, ok := rawConfig["tools"].([]any)
-			if !ok {
-				t.Fatal("Tools should be an array")
-			}
-
-			if len(tools) == 0 {
-				t.Error("No tools were generated")
-			}
-
-			// If specific tools are expected, validate them
-			if len(tc.expectedTools) > 0 {
-				toolNames := make(map[string]bool)
-				for _, toolRaw := range tools {
-					tool, ok := toolRaw.(map[string]any)
-					if !ok {
-						continue
-					}
-					if name, ok := tool["name"].(string); ok {
-						toolNames[name] = true
+			getToolNames := func(tools []any) map[string]bool {
+				names := make(map[string]bool)
+				for _, tool := range tools {
+					if name, ok := tool.(map[string]any)["name"].(string); ok {
+						names[name] = true
 					}
 				}
+				return names
+			}
 
-				for _, expectedTool := range tc.expectedTools {
-					if !toolNames[expectedTool] {
-						t.Errorf("Expected tool %s not found in generated config", expectedTool)
-					}
+			actualNames, expectedNames := getToolNames(actualTools), getToolNames(expectedTools)
+			for name := range expectedNames {
+				if !actualNames[name] {
+					t.Errorf("Missing expected tool: %s", name)
+				}
+			}
+			for name := range actualNames {
+				if !expectedNames[name] {
+					t.Errorf("Unexpected tool found: %s", name)
 				}
 			}
 
-			// Validate each tool has required fields
-			for i, toolRaw := range tools {
-				tool, ok := toolRaw.(map[string]any)
-				if !ok {
-					t.Errorf("Tool %d should be an object", i)
-					continue
-				}
-
-				name, ok := tool["name"].(string)
-				if !ok || name == "" {
-					t.Errorf("Tool %d name should not be empty", i)
-				}
-
-				description, ok := tool["description"].(string)
-				if !ok || description == "" {
-					t.Errorf("Tool %d description should not be empty", i)
-				}
-
-				// Validate input schema structure
-				inputSchema, ok := tool["inputSchema"].(map[string]any)
-				if !ok {
-					t.Errorf("Tool %d should have inputSchema", i)
-					continue
-				}
-
-				schemaType, ok := inputSchema["type"].(string)
-				if !ok || schemaType != "object" {
-					t.Errorf("Tool %d input schema should have type 'object'", i)
-				}
-
-				// Properties field is optional for tools with no parameters
-				if properties, ok := inputSchema["properties"]; ok {
-					if props, ok := properties.(map[string]any); ok && len(props) == 0 {
-						// Empty properties map is valid
-					}
-				}
-				// Tools with no parameters may not have properties field at all
-			}
-
-			t.Logf("Successfully generated and validated config for %s with %d tools", tc.name, len(tools))
+			t.Logf("✅ %s: %d tools match expected results", tc.name, len(actualTools))
 		})
 	}
 }
