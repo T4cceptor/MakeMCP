@@ -66,6 +66,13 @@ func getTestCases() []testCase {
 			expectedResultFile: "expected_result/adobe_aem_makemcp.json",
 			expectedSource:     "openapi",
 		},
+		{
+			name:               "AWSS3",
+			specFile:           "sample_specifications/aws_s3.json",
+			baseURL:            "https://s3.amazonaws.com",
+			expectedResultFile: "expected_result/aws_s3_makemcp.json",
+			expectedSource:     "openapi",
+		},
 	}
 }
 
