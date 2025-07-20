@@ -16,8 +16,19 @@ MakeMCP is a simple CLI tool that converts OpenAPI specifications into MCP (Mode
 
 ### Install
 
-### Quick Install (Recommended)
+### Quick Install
 
+With homebrew (macOS / Linux, note: this requires go installed and in path)
+```bash
+# Add the tap (once the tap is created)
+brew tap T4cceptor/makemcp
+
+# Install MakeMCP
+brew install makemcp
+```
+For latest dev version use: `brew install --HEAD t4cceptor/makemcp/makemcp`
+
+Without homebrew (Windows)
 ```bash
 # Linux/macOS - automatic download and install
 curl -sSL https://raw.githubusercontent.com/T4cceptor/MakeMCP/main/install.sh | bash
