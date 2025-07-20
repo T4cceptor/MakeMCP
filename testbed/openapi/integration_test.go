@@ -67,6 +67,18 @@ func getTestCases() []testCase {
 			},
 			expectedSource: "openapi",
 		},
+		{
+			name:     "Salesforce",
+			specFile: "sample_specifications/salesforce_1.json",
+			baseURL:  "https://api.salesforce.com/einstein/platform/v1",
+			expectedTools: []string{
+				"generatechat",
+				"generateembeddings", 
+				"generatetext",
+				"submitfeedback",
+			},
+			expectedSource: "openapi",
+		},
 	}
 }
 
