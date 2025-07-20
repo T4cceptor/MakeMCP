@@ -39,6 +39,13 @@ type testCase struct {
 func getTestCases() []testCase {
 	return []testCase{
 		{
+			name:               "SimpleWithBody",
+			specFile:           "sample_specifications/simple_with_body.json",
+			baseURL:            "https://api.example.com/v1",
+			expectedResultFile: "expected_result/simple_with_body_makemcp.json",
+			expectedSource:     "openapi",
+		},
+		{
 			name:               "FastAPI",
 			specFile:           "sample_specifications/fastapi.json",
 			baseURL:            "http://localhost:8081",

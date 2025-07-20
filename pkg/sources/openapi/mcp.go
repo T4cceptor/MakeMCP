@@ -390,6 +390,9 @@ func extractRequestBodyProperties(operation *openapi3.Operation) (map[string]Too
 
 	for contentType, media := range operation.RequestBody.Value.Content {
 		if contentType != "application/json" || media.Schema == nil || media.Schema.Value == nil {
+			// TODO: this might be a problem
+			// for example: AWS S3 specs are actually using "text/xml"
+			// maybe there are other content types we should support out of the box...
 			continue
 		}
 		schema := media.Schema.Value
@@ -435,8 +438,8 @@ func buildRequestURL(baseURL, path string, params ToolParams, method string) str
 	pathWithParams := substitutePathParams(path, params.Path)
 	fullURL := baseURL + pathWithParams
 
-	// Add query parameters for GET/DELETE methods
-	if len(params.Query) > 0 && (method == http.MethodGet || method == http.MethodDelete) {
+	// Add query parameters for all HTTP methods
+	if len(params.Query) > 0 {
 		encodedQuery := encodeQueryParams(params.Query)
 		if encodedQuery != "" {
 			fullURL = fullURL + "?" + encodedQuery
