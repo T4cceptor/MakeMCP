@@ -36,6 +36,15 @@ func SaveToFile(app *core.MakeMCPApp) error {
 	} else {
 		filename = fmt.Sprintf("%s_makemcp.json", app.Name)
 	}
+	
+	// Ensure the directory exists
+	dir := filepath.Dir(filename)
+	if dir != "." {
+		if err := os.MkdirAll(dir, 0o755); err != nil {
+			return fmt.Errorf("failed to create directory %s: %w", dir, err)
+		}
+	}
+	
 	file, err := os.Create(filename)
 	if err != nil {
 		return fmt.Errorf("failed to create file: %w", err)

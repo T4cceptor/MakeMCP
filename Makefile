@@ -11,7 +11,7 @@ BUILD_DATE ?= $(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
 # Build flags
 LDFLAGS=-ldflags "-s -w -X main.version=$(VERSION) -X main.commit=$(COMMIT_HASH) -X main.buildDate=$(BUILD_DATE)"
 
-.PHONY: help build clean test install dev-deps lint fmt vet tidy run local-config-test local-test
+.PHONY: help build clean test install dev-deps lint fmt vet tidy run local-config-test local-test integration-test
 
 help: ## Show this help message
 	@echo "Available commands:"
@@ -69,6 +69,10 @@ local-file-test:
 	$(BUILD_DIR)/$(BINARY_NAME) load makemcp.json
 
 local-test: local-openapi-test ## Alias for local-openapi-test
+
+integration-test: build ## Run OpenAPI integration tests
+	@echo "Running OpenAPI integration tests..."
+	cd testbed/openapi && go test -v
 
 # Cross-compilation targets
 build-all: ## Build for all platforms
