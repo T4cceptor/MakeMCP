@@ -6,9 +6,9 @@ coverage*
 
 /**/test.db
 
-# makemcp & config files
-*.makemcp.json
-*makemcp.json
+# makemcp & config files (root level only)
+/*.makemcp.json
+/makemcp.json
 makemcp
 
 # Personal VS Code MCP configuration

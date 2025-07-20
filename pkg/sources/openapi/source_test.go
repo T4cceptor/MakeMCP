@@ -66,7 +66,7 @@ func TestOpenAPISource_Parse(t *testing.T) {
 	input := &core.CLIParamsInput{
 		SharedParams: sharedParams,
 		CliFlags: map[string]any{
-			"specs":    "../../../testdata/sample_openapi.json",
+			"specs":    "../../../testbed/openapi/expected_result/simplewithbody_makemcp.json",
 			"base-url": "http://localhost:8080",
 		},
 		CliArgs: []string{},

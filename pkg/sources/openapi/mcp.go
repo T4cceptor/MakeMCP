@@ -150,11 +150,12 @@ func (s *OpenAPISource) UnmarshalConfig(data []byte) (*core.MakeMCPApp, error) {
 
 // OpenAPIHandlerInput defines how a particular endpoint is to be called
 type OpenAPIHandlerInput struct {
-	Method     string            `json:"method"`
-	Path       string            `json:"path"`
-	Headers    map[string]string `json:"headers"`
-	Cookies    map[string]string `json:"cookies"`
-	BodyAppend map[string]any    `json:"bodyAppend"`
+	Method      string            `json:"method"`
+	Path        string            `json:"path"`
+	Headers     map[string]string `json:"headers"`
+	Cookies     map[string]string `json:"cookies"`
+	BodyAppend  map[string]any    `json:"bodyAppend"`
+	ContentType string            `json:"contentType,omitempty"`
 }
 
 // NewOpenAPIHandlerInput creates a new OpenAPIHandlerInput
@@ -219,6 +220,12 @@ func (s *OpenAPISource) createToolFromOperation(method, path string, operation *
 		description = fmt.Sprintf("%s %s", strings.ToUpper(method), path)
 	}
 
+	// Add schema documentation for non-JSON request bodies
+	bodySchemaDoc := extractRequestBodySchemaDoc(operation)
+	if bodySchemaDoc != "" {
+		description = description + "\n\n" + bodySchemaDoc
+	}
+
 	// Create the tool
 	tool := OpenAPIMcpTool{
 		McpTool: core.McpTool{
@@ -228,11 +235,12 @@ func (s *OpenAPISource) createToolFromOperation(method, path string, operation *
 			Annotations: toolAnnotations,
 		},
 		OpenAPIHandlerInput: &OpenAPIHandlerInput{
-			Method:     method,
-			Path:       path,
-			Headers:    make(map[string]string),
-			Cookies:    make(map[string]string),
-			BodyAppend: make(map[string]interface{}),
+			Method:      method,
+			Path:        path,
+			Headers:     make(map[string]string),
+			Cookies:     make(map[string]string),
+			BodyAppend:  make(map[string]interface{}),
+			ContentType: determineContentType(operation),
 		},
 	}
 
@@ -378,8 +386,91 @@ func extractParametersByIn(operation *openapi3.Operation, in ParameterLocation) 
 	return properties, required
 }
 
+// generateSchemaDocumentation creates human-readable schema documentation for XML/other content types.
+func generateSchemaDocumentation(schema *openapi3.Schema, contentType string) string {
+	if schema == nil || len(schema.Properties) == 0 {
+		return fmt.Sprintf("Provide %s content as a string.", contentType)
+	}
+
+	var doc strings.Builder
+	doc.WriteString(fmt.Sprintf("Expected %s structure:\n", contentType))
+
+	for propName, propSchemaRef := range schema.Properties {
+		propSchema := propSchemaRef.Value
+		if propSchema == nil {
+			continue
+		}
+
+		required := ""
+		if contains(schema.Required, propName) {
+			required = " (required)"
+		}
+
+		doc.WriteString(fmt.Sprintf("- %s: %s%s", propName, getSchemaTypeString(propSchema), required))
+		if propSchema.Description != "" {
+			doc.WriteString(fmt.Sprintf(" - %s", propSchema.Description))
+		}
+		doc.WriteString("\n")
+	}
+
+	doc.WriteString(fmt.Sprintf("\nProvide the complete %s as a string in the 'body' parameter.", contentType))
+	return doc.String()
+}
+
+// contains checks if a string slice contains a specific string.
+func contains(slice []string, item string) bool {
+	for _, s := range slice {
+		if s == item {
+			return true
+		}
+	}
+	return false
+}
+
+// determineContentType returns the preferred content type for an operation's request body.
+func determineContentType(operation *openapi3.Operation) string {
+	if operation.RequestBody == nil || operation.RequestBody.Value == nil {
+		return ""
+	}
+
+	// Priority order for content types
+	contentTypes := []string{"application/json", "*/*", "text/xml", "application/xml", "text/plain"}
+
+	for _, contentType := range contentTypes {
+		if _, exists := operation.RequestBody.Value.Content[contentType]; exists {
+			return contentType
+		}
+	}
+
+	// Return first available content type if no priority match
+	for contentType := range operation.RequestBody.Value.Content {
+		return contentType
+	}
+
+	return ""
+}
+
+// extractRequestBodySchemaDoc extracts schema documentation for non-JSON content types.
+func extractRequestBodySchemaDoc(operation *openapi3.Operation) string {
+	if operation.RequestBody == nil || operation.RequestBody.Value == nil {
+		return ""
+	}
+
+	// Check for non-JSON content types that need schema documentation
+	nonJSONContentTypes := []string{"text/xml", "application/xml", "text/plain"}
+	
+	for _, contentType := range nonJSONContentTypes {
+		if media, exists := operation.RequestBody.Value.Content[contentType]; exists {
+			if media.Schema != nil && media.Schema.Value != nil {
+				return generateSchemaDocumentation(media.Schema.Value, contentType)
+			}
+		}
+	}
+
+	return ""
+}
+
 // extractRequestBodyProperties extracts properties and required fields from the request body schema (if present).
-// Only supports application/json bodies with object schemas for now.
 func extractRequestBodyProperties(operation *openapi3.Operation) (map[string]ToolInputProperty, []string) {
 	properties := make(map[string]ToolInputProperty)
 	var required []string
@@ -388,30 +479,74 @@ func extractRequestBodyProperties(operation *openapi3.Operation) (map[string]Too
 		return properties, required
 	}
 
-	for contentType, media := range operation.RequestBody.Value.Content {
-		if contentType != "application/json" || media.Schema == nil || media.Schema.Value == nil {
-			// TODO: this might be a problem
-			// for example: AWS S3 specs are actually using "text/xml"
-			// maybe there are other content types we should support out of the box...
-			continue
-		}
-		schema := media.Schema.Value
-		for propName, propSchemaRef := range schema.Properties {
-			propSchema := propSchemaRef.Value
-			if propSchema == nil {
-				continue
+	// Check for supported content types in priority order
+	contentTypes := []string{"application/json", "*/*", "text/xml", "application/xml"}
+
+	for _, contentType := range contentTypes {
+		if media, exists := operation.RequestBody.Value.Content[contentType]; exists {
+			if contentType == "application/json" || contentType == "*/*" {
+				// Handle JSON/generic - extract individual properties
+				if media.Schema != nil && media.Schema.Value != nil {
+					schema := media.Schema.Value
+					for propName, propSchemaRef := range schema.Properties {
+						propSchema := propSchemaRef.Value
+						if propSchema == nil {
+							continue
+						}
+						properties[propName] = ToolInputProperty{
+							Type:        getSchemaTypeString(propSchema),
+							Description: propSchema.Description,
+							Location:    "body",
+						}
+					}
+					if schema.Required != nil {
+						required = append(required, schema.Required...)
+					}
+				}
+			} else {
+				// Handle XML and other structured types - single body parameter
+				properties["body"] = ToolInputProperty{
+					Type:        "string",
+					Description: fmt.Sprintf("%s request body", contentType),
+					Location:    "body",
+				}
+				required = append(required, "body")
 			}
-			properties[propName] = ToolInputProperty{
-				Type:        getSchemaTypeString(propSchema),
-				Description: propSchema.Description,
-				Location:    "body",
-			}
-		}
-		// Add required fields from the schema
-		if schema.Required != nil {
-			required = append(required, schema.Required...)
+			return properties, required
 		}
 	}
+
+	// If no recognized content type found, try the first available one
+	for contentType, media := range operation.RequestBody.Value.Content {
+		if media.Schema != nil && media.Schema.Value != nil && len(media.Schema.Value.Properties) > 0 {
+			// Has schema properties - treat like JSON for unknown content types
+			schema := media.Schema.Value
+			for propName, propSchemaRef := range schema.Properties {
+				propSchema := propSchemaRef.Value
+				if propSchema == nil {
+					continue
+				}
+				properties[propName] = ToolInputProperty{
+					Type:        getSchemaTypeString(propSchema),
+					Description: propSchema.Description,
+					Location:    "body",
+				}
+			}
+			if schema.Required != nil {
+				required = append(required, schema.Required...)
+			}
+		} else {
+			// No schema or properties - single body parameter
+			properties["body"] = ToolInputProperty{
+				Type:        "string",
+				Description: fmt.Sprintf("%s request body", contentType),
+				Location:    "body",
+			}
+			required = append(required, "body")
+		}
+		break // Use the first one found
+	}
+
 	return properties, required
 }
 
@@ -449,22 +584,46 @@ func buildRequestURL(baseURL, path string, params ToolParams, method string) str
 	return fullURL
 }
 
-// buildRequestBody prepares the request body for non-GET/DELETE methods..
-func buildRequestBody(params ToolParams, method string) (io.Reader, error) {
+// buildRequestBody prepares the request body for non-GET/DELETE methods based on content type.
+func buildRequestBody(params ToolParams, method, contentType string) (io.Reader, error) {
 	if len(params.Body) > 0 && !(method == http.MethodGet || method == http.MethodDelete) {
-		jsonBody, err := json.Marshal(params.Body)
-		if err != nil {
-			return nil, err
+		switch contentType {
+		case "text/xml", "application/xml":
+			// For XML, expect a single "body" parameter with XML string
+			if bodyContent, exists := params.Body["body"]; exists {
+				if bodyStr, ok := bodyContent.(string); ok {
+					return strings.NewReader(bodyStr), nil
+				}
+				return nil, fmt.Errorf("XML body parameter must be a string containing valid XML")
+			}
+			return nil, fmt.Errorf("XML content type requires a 'body' parameter with XML string")
+		case "text/plain":
+			// For plain text, expect a single "body" parameter
+			if bodyContent, exists := params.Body["body"]; exists {
+				if bodyStr, ok := bodyContent.(string); ok {
+					return strings.NewReader(bodyStr), nil
+				}
+				return nil, fmt.Errorf("plain text body parameter must be a string")
+			}
+			return nil, fmt.Errorf("plain text content type requires a 'body' parameter with text string")
+		default:
+			// Default to JSON serialization for application/json, */*, and others
+			jsonBody, err := json.Marshal(params.Body)
+			if err != nil {
+				return nil, err
+			}
+			return bytes.NewReader(jsonBody), nil
 		}
-		return bytes.NewReader(jsonBody), nil
 	}
 	return nil, nil
 }
 
-// setRequestHeaders applies headers and cookies to the HTTP request..
-func setRequestHeaders(req *http.Request, params ToolParams, hasBody bool) {
-	if hasBody {
-		req.Header.Set("Content-Type", "application/json")
+// setRequestHeaders applies headers and cookies to the HTTP request with appropriate content type.
+func setRequestHeaders(req *http.Request, params ToolParams, hasBody bool, contentType string) {
+	if hasBody && contentType != "" {
+		req.Header.Set("Content-Type", contentType)
+	} else if hasBody {
+		req.Header.Set("Content-Type", "application/json") // Default fallback
 	}
 
 	// Set headers
@@ -532,7 +691,7 @@ func GetHandlerFunction(makeMcpTool *OpenAPIMcpTool, apiClient *APIClient) func(
 
 		// Build URL and body using helper functions
 		fullURL := buildRequestURL(apiClient.BaseURL, makeMcpTool.OpenAPIHandlerInput.Path, params, method)
-		bodyReader, err := buildRequestBody(params, method)
+		bodyReader, err := buildRequestBody(params, method, makeMcpTool.OpenAPIHandlerInput.ContentType)
 		if err != nil {
 			return nil, err
 		}
@@ -544,7 +703,7 @@ func GetHandlerFunction(makeMcpTool *OpenAPIMcpTool, apiClient *APIClient) func(
 		}
 
 		// Apply headers and cookies using helper function
-		setRequestHeaders(req, params, bodyReader != nil)
+		setRequestHeaders(req, params, bodyReader != nil, makeMcpTool.OpenAPIHandlerInput.ContentType)
 
 		// Execute request
 		resp, err := apiClient.HTTPClient.Do(req)
