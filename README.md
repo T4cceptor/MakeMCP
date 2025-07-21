@@ -31,7 +31,7 @@ For latest dev version use: `brew install --HEAD t4cceptor/makemcp/makemcp`
 Without homebrew (Windows)
 ```bash
 # Linux/macOS - automatic download and install
-curl -sSL https://raw.githubusercontent.com/T4cceptor/MakeMCP/main/install.sh | bash
+curl -sSL https://raw.githubusercontent.com/T4cceptor/MakeMCP/main/scripts/install.sh | bash
 ```
 
 ### Other Installation Methods
