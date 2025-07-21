@@ -1,0 +1,212 @@
+{
+  "name": "OpenAPI",
+  "version": "0.0.1",
+  "sourceType": "openapi",
+  "tools": [
+    {
+      "name": "get__",
+      "description": "#### Controller: \n\n`main.main.func1`\n\n#### Middlewares:\n\n- `github.com/go-fuego/fuego.defaultLogger.middleware`\n\n---\n\nReturns a welcome message",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "header__Accept": {
+            "description": "",
+            "type": "string"
+          }
+        }
+      },
+      "annotations": {
+        "title": "get__",
+        "readOnlyHint": true,
+        "idempotentHint": true
+      },
+      "oapiHandlerInput": {
+        "method": "GET",
+        "path": "/",
+        "headers": {},
+        "cookies": {},
+        "bodyAppend": {}
+      }
+    },
+    {
+      "name": "get__users",
+      "description": "#### Controller: \n\n`main.main.func2`\n\n#### Middlewares:\n\n- `github.com/go-fuego/fuego.defaultLogger.middleware`\n\n---\n\nRetrieves all users from the database",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "header__Accept": {
+            "description": "",
+            "type": "string"
+          }
+        }
+      },
+      "annotations": {
+        "title": "get__users",
+        "readOnlyHint": true,
+        "idempotentHint": true
+      },
+      "oapiHandlerInput": {
+        "method": "GET",
+        "path": "/users",
+        "headers": {},
+        "cookies": {},
+        "bodyAppend": {}
+      }
+    },
+    {
+      "name": "post__users",
+      "description": "#### Controller: \n\n`main.main.func3`\n\n#### Middlewares:\n\n- `github.com/go-fuego/fuego.defaultLogger.middleware`\n\n---\n\nCreates a new user in the database",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "body__email": {
+            "description": "",
+            "type": "string"
+          },
+          "body__id": {
+            "description": "",
+            "type": "integer"
+          },
+          "body__name": {
+            "description": "",
+            "type": "string"
+          },
+          "header__Accept": {
+            "description": "",
+            "type": "string"
+          }
+        }
+      },
+      "annotations": {
+        "title": "post__users",
+        "idempotentHint": false
+      },
+      "oapiHandlerInput": {
+        "method": "POST",
+        "path": "/users",
+        "headers": {},
+        "cookies": {},
+        "bodyAppend": {},
+        "contentType": "*/*"
+      }
+    },
+    {
+      "name": "get__users_:id",
+      "description": "#### Controller: \n\n`main.main.func4`\n\n#### Middlewares:\n\n- `github.com/go-fuego/fuego.defaultLogger.middleware`\n\n---\n\nRetrieves a specific user by their ID",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "header__Accept": {
+            "description": "",
+            "type": "string"
+          },
+          "path__id": {
+            "description": "",
+            "type": "string"
+          }
+        },
+        "required": [
+          "path__id"
+        ]
+      },
+      "annotations": {
+        "title": "get__users_:id",
+        "readOnlyHint": true,
+        "idempotentHint": true
+      },
+      "oapiHandlerInput": {
+        "method": "GET",
+        "path": "/users/{id}",
+        "headers": {},
+        "cookies": {},
+        "bodyAppend": {}
+      }
+    },
+    {
+      "name": "patch__users_:id",
+      "description": "#### Controller: \n\n`main.main.func5`\n\n#### Middlewares:\n\n- `github.com/go-fuego/fuego.defaultLogger.middleware`\n\n---\n\nUpdates an existing user's information",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "body__email": {
+            "description": "",
+            "type": "string"
+          },
+          "body__id": {
+            "description": "",
+            "type": "integer"
+          },
+          "body__name": {
+            "description": "",
+            "type": "string"
+          },
+          "header__Accept": {
+            "description": "",
+            "type": "string"
+          },
+          "path__id": {
+            "description": "",
+            "type": "string"
+          }
+        },
+        "required": [
+          "path__id"
+        ]
+      },
+      "annotations": {
+        "title": "patch__users_:id"
+      },
+      "oapiHandlerInput": {
+        "method": "PATCH",
+        "path": "/users/{id}",
+        "headers": {},
+        "cookies": {},
+        "bodyAppend": {},
+        "contentType": "*/*"
+      }
+    },
+    {
+      "name": "delete__users_:id",
+      "description": "#### Controller: \n\n`main.main.func6`\n\n#### Middlewares:\n\n- `github.com/go-fuego/fuego.defaultLogger.middleware`\n\n---\n\nRemoves a user from the database",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "header__Accept": {
+            "description": "",
+            "type": "string"
+          },
+          "path__id": {
+            "description": "",
+            "type": "string"
+          }
+        },
+        "required": [
+          "path__id"
+        ]
+      },
+      "annotations": {
+        "title": "delete__users_:id",
+        "destructiveHint": true
+      },
+      "oapiHandlerInput": {
+        "method": "DELETE",
+        "path": "/users/{id}",
+        "headers": {},
+        "cookies": {},
+        "bodyAppend": {}
+      }
+    }
+  ],
+  "config": {
+    "transport": "stdio",
+    "configOnly": true,
+    "port": "8080",
+    "devMode": false,
+    "sourceType": "openapi",
+    "file": "gofuego_makemcp",
+    "specs": "testbed/openapi/sample_specifications/gofuego.json",
+    "baseURL": "http://localhost:8120",
+    "timeout": 30,
+    "strictValidate": false
+  }
+}

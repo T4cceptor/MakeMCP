@@ -1,0 +1,55 @@
+{
+  "name": "Simple API with Body Parameters",
+  "version": "1.0.0",
+  "sourceType": "openapi",
+  "tools": [
+    {
+      "name": "createuser",
+      "description": "Creates a new user with the provided information",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "body__age": {
+            "description": "The user's age (optional)",
+            "type": "integer"
+          },
+          "body__email": {
+            "description": "The user's email address",
+            "type": "string"
+          },
+          "body__name": {
+            "description": "The user's full name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "body__email",
+          "body__name"
+        ]
+      },
+      "annotations": {
+        "title": "createuser",
+        "idempotentHint": false
+      },
+      "oapiHandlerInput": {
+        "method": "POST",
+        "path": "/users",
+        "headers": {},
+        "cookies": {},
+        "bodyAppend": {}
+      }
+    }
+  ],
+  "config": {
+    "transport": "stdio",
+    "configOnly": true,
+    "port": "8080",
+    "devMode": false,
+    "sourceType": "openapi",
+    "file": "simplewithbody_makemcp",
+    "specs": "testbed/openapi/sample_specifications/simple_with_body.json",
+    "baseURL": "https://api.example.com/v1",
+    "timeout": 30,
+    "strictValidate": false
+  }
+}

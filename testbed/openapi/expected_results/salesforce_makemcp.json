@@ -1,0 +1,214 @@
+{
+  "name": "Models REST API",
+  "version": "v1",
+  "sourceType": "openapi",
+  "tools": [
+    {
+      "name": "generateembeddings",
+      "description": "Create an embedding vector representing the input text.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "header__Authorization": {
+            "description": "Authorization information that contains the JWT. For guidance, see [Access Models API with REST](https://developer.salesforce.com/docs/einstein/genai/guide/access-models-api-with-rest.html).",
+            "type": "string"
+          },
+          "header__x-client-feature-id": {
+            "description": "This value is reserved for future use. For now, specify `ai-platform-models-connected-app`.",
+            "type": "string"
+          },
+          "header__x-sfdc-app-context": {
+            "description": "This value is reserved for future use. For now, specify `EinsteinGPT`.",
+            "type": "string"
+          },
+          "path__modelName": {
+            "description": "Configured model name.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "path__modelName",
+          "header__Authorization",
+          "header__x-sfdc-app-context",
+          "header__x-client-feature-id"
+        ]
+      },
+      "annotations": {
+        "title": "generateembeddings",
+        "idempotentHint": false
+      },
+      "oapiHandlerInput": {
+        "method": "POST",
+        "path": "/models/{modelName}/embeddings",
+        "headers": {},
+        "cookies": {},
+        "bodyAppend": {}
+      }
+    },
+    {
+      "name": "generatetext",
+      "description": "Generate a response based on the provided prompt.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "header__Authorization": {
+            "description": "Authorization information that contains the JWT. For guidance, see [Access Models API with REST](https://developer.salesforce.com/docs/einstein/genai/guide/access-models-api-with-rest.html).",
+            "type": "string"
+          },
+          "header__x-client-feature-id": {
+            "description": "This value is reserved for future use. For now, specify `ai-platform-models-connected-app`.",
+            "type": "string"
+          },
+          "header__x-sfdc-app-context": {
+            "description": "This value is reserved for future use. For now, specify `EinsteinGPT`.",
+            "type": "string"
+          },
+          "path__modelName": {
+            "description": "Configured model name.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "path__modelName",
+          "header__Authorization",
+          "header__x-sfdc-app-context",
+          "header__x-client-feature-id"
+        ]
+      },
+      "annotations": {
+        "title": "generatetext",
+        "idempotentHint": false
+      },
+      "oapiHandlerInput": {
+        "method": "POST",
+        "path": "/models/{modelName}/generations",
+        "headers": {},
+        "cookies": {},
+        "bodyAppend": {}
+      }
+    },
+    {
+      "name": "submitfeedback",
+      "description": "Submit feedback for generated text.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "body__appFeedback": {
+            "description": "Dictionary of any app-level feedback and any other free-form parameters.",
+            "type": "object"
+          },
+          "body__appGeneration": {
+            "description": "App-specific generation text to support cases where the client has multiple responses in a single generation.",
+            "type": "string"
+          },
+          "body__appGenerationId": {
+            "description": "App-specific generation ID to support cases where the client has multiple responses in a single generation.",
+            "type": "string"
+          },
+          "body__feedback": {
+            "description": "The feedback sentiment. Can be `null`.",
+            "type": "string"
+          },
+          "body__feedbackText": {
+            "description": "The textual representation of the feedback as provided by the user.",
+            "type": "string"
+          },
+          "body__generationId": {
+            "description": "Identifies the target of this feedback data. You can specify the ID of a `/generations` response, or use any other identifier as a string value. The Models API doesn’t do any semantic validation on this field and it’s only meant for you to identify this information in the datastore.",
+            "type": "string"
+          },
+          "body__id": {
+            "description": "A unique ID for the feedback object.",
+            "type": "string"
+          },
+          "body__source": {
+            "description": "The source of the feedback. For example, `human` or `app`.",
+            "type": "string"
+          },
+          "header__Authorization": {
+            "description": "Authorization information that contains the JWT. For guidance, see [Access Models API with REST](https://developer.salesforce.com/docs/einstein/genai/guide/access-models-api-with-rest.html).",
+            "type": "string"
+          },
+          "header__x-client-feature-id": {
+            "description": "This value is reserved for future use. For now, specify `ai-platform-models-connected-app`.",
+            "type": "string"
+          },
+          "header__x-sfdc-app-context": {
+            "description": "This value is reserved for future use. For now, specify `EinsteinGPT`.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "header__Authorization",
+          "header__x-sfdc-app-context",
+          "header__x-client-feature-id"
+        ]
+      },
+      "annotations": {
+        "title": "submitfeedback",
+        "idempotentHint": false
+      },
+      "oapiHandlerInput": {
+        "method": "POST",
+        "path": "/feedback",
+        "headers": {},
+        "cookies": {},
+        "bodyAppend": {}
+      }
+    },
+    {
+      "name": "generatechat",
+      "description": "Generate a response based on a list of messages representing a chat conversation.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "header__Authorization": {
+            "description": "Authorization information that contains the JWT. For guidance, see [Access Models API with REST](https://developer.salesforce.com/docs/einstein/genai/guide/access-models-api-with-rest.html).",
+            "type": "string"
+          },
+          "header__x-client-feature-id": {
+            "description": "This value is reserved for future use. For now, specify `ai-platform-models-connected-app`.",
+            "type": "string"
+          },
+          "header__x-sfdc-app-context": {
+            "description": "This value is reserved for future use. For now, specify `EinsteinGPT`.",
+            "type": "string"
+          },
+          "path__modelName": {
+            "description": "Configured model name.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "path__modelName",
+          "header__x-client-feature-id",
+          "header__Authorization",
+          "header__x-sfdc-app-context"
+        ]
+      },
+      "annotations": {
+        "title": "generatechat",
+        "idempotentHint": false
+      },
+      "oapiHandlerInput": {
+        "method": "POST",
+        "path": "/models/{modelName}/chat-generations",
+        "headers": {},
+        "cookies": {},
+        "bodyAppend": {}
+      }
+    }
+  ],
+  "config": {
+    "transport": "stdio",
+    "configOnly": true,
+    "port": "8080",
+    "devMode": false,
+    "sourceType": "openapi",
+    "file": "testbed/openapi/results/salesforce_makemcp",
+    "specs": "testbed/openapi/sample_specifications/salesforce_1.json",
+    "baseURL": "https://api.salesforce.com/einstein/platform/v1",
+    "timeout": 30,
+    "strictValidate": false
+  }
+}
