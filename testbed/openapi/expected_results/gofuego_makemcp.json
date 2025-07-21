@@ -59,6 +59,18 @@
       "inputSchema": {
         "type": "object",
         "properties": {
+          "body__email": {
+            "description": "",
+            "type": "string"
+          },
+          "body__id": {
+            "description": "",
+            "type": "integer"
+          },
+          "body__name": {
+            "description": "",
+            "type": "string"
+          },
           "header__Accept": {
             "description": "",
             "type": "string"
@@ -74,38 +86,8 @@
         "path": "/users",
         "headers": {},
         "cookies": {},
-        "bodyAppend": {}
-      }
-    },
-    {
-      "name": "delete__users_:id",
-      "description": "#### Controller: \n\n`main.main.func6`\n\n#### Middlewares:\n\n- `github.com/go-fuego/fuego.defaultLogger.middleware`\n\n---\n\nRemoves a user from the database",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "header__Accept": {
-            "description": "",
-            "type": "string"
-          },
-          "path__id": {
-            "description": "",
-            "type": "string"
-          }
-        },
-        "required": [
-          "path__id"
-        ]
-      },
-      "annotations": {
-        "title": "delete__users_:id",
-        "destructiveHint": true
-      },
-      "oapiHandlerInput": {
-        "method": "DELETE",
-        "path": "/users/{id}",
-        "headers": {},
-        "cookies": {},
-        "bodyAppend": {}
+        "bodyAppend": {},
+        "contentType": "*/*"
       }
     },
     {
@@ -146,6 +128,18 @@
       "inputSchema": {
         "type": "object",
         "properties": {
+          "body__email": {
+            "description": "",
+            "type": "string"
+          },
+          "body__id": {
+            "description": "",
+            "type": "integer"
+          },
+          "body__name": {
+            "description": "",
+            "type": "string"
+          },
           "header__Accept": {
             "description": "",
             "type": "string"
@@ -167,6 +161,38 @@
         "path": "/users/{id}",
         "headers": {},
         "cookies": {},
+        "bodyAppend": {},
+        "contentType": "*/*"
+      }
+    },
+    {
+      "name": "delete__users_:id",
+      "description": "#### Controller: \n\n`main.main.func6`\n\n#### Middlewares:\n\n- `github.com/go-fuego/fuego.defaultLogger.middleware`\n\n---\n\nRemoves a user from the database",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "header__Accept": {
+            "description": "",
+            "type": "string"
+          },
+          "path__id": {
+            "description": "",
+            "type": "string"
+          }
+        },
+        "required": [
+          "path__id"
+        ]
+      },
+      "annotations": {
+        "title": "delete__users_:id",
+        "destructiveHint": true
+      },
+      "oapiHandlerInput": {
+        "method": "DELETE",
+        "path": "/users/{id}",
+        "headers": {},
+        "cookies": {},
         "bodyAppend": {}
       }
     }
@@ -177,7 +203,7 @@
     "port": "8080",
     "devMode": false,
     "sourceType": "openapi",
-    "file": "testbed/openapi/results/gofuego_makemcp",
+    "file": "gofuego_makemcp",
     "specs": "testbed/openapi/sample_specifications/gofuego.json",
     "baseURL": "http://localhost:8120",
     "timeout": 30,

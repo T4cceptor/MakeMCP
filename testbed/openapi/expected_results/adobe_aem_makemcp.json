@@ -4,232 +4,70 @@
   "sourceType": "openapi",
   "tools": [
     {
-      "name": "getcrxdestatus",
-      "description": "GET /crx/server/crx.default/jcr:root/.1.json",
+      "name": "posttreeactivation",
+      "description": "POST /libs/replication/treeactivation.html",
       "inputSchema": {
-        "type": "object"
+        "type": "object",
+        "properties": {
+          "query__cmd": {
+            "description": "",
+            "type": "string"
+          },
+          "query__ignoredeactivated": {
+            "description": "",
+            "type": "boolean"
+          },
+          "query__onlymodified": {
+            "description": "",
+            "type": "boolean"
+          },
+          "query__path": {
+            "description": "",
+            "type": "string"
+          }
+        },
+        "required": [
+          "query__ignoredeactivated",
+          "query__onlymodified",
+          "query__path",
+          "query__cmd"
+        ]
       },
       "annotations": {
-        "title": "getcrxdestatus",
-        "readOnlyHint": true,
-        "idempotentHint": true
+        "title": "posttreeactivation",
+        "idempotentHint": false
       },
       "oapiHandlerInput": {
-        "method": "GET",
-        "path": "/crx/server/crx.default/jcr:root/.1.json",
+        "method": "POST",
+        "path": "/libs/replication/treeactivation.html",
         "headers": {},
         "cookies": {},
         "bodyAppend": {}
       }
     },
     {
-      "name": "postsamlconfiguration",
-      "description": "POST /system/console/configMgr/com.adobe.granite.auth.saml.SamlAuthenticationHandler",
+      "name": "postconfigaemhealthcheckservlet",
+      "description": "POST /apps/system/config/com.shinesolutions.healthcheck.hc.impl.ActiveBundleHealthCheck",
       "inputSchema": {
         "type": "object",
         "properties": {
-          "query__$location": {
-            "description": "",
-            "type": "string"
-          },
-          "query__action": {
-            "description": "",
-            "type": "string"
-          },
-          "query__addGroupMemberships": {
-            "description": "",
-            "type": "boolean"
-          },
-          "query__apply": {
-            "description": "",
-            "type": "boolean"
-          },
-          "query__assertionConsumerServiceURL": {
-            "description": "",
-            "type": "string"
-          },
-          "query__clockTolerance": {
-            "description": "",
-            "type": "integer"
-          },
-          "query__createUser": {
-            "description": "",
-            "type": "boolean"
-          },
-          "query__defaultGroups": {
+          "query__bundles.ignored": {
             "description": "",
             "type": "array"
           },
-          "query__defaultRedirectUrl": {
-            "description": "",
-            "type": "string"
-          },
-          "query__delete": {
-            "description": "",
-            "type": "boolean"
-          },
-          "query__digestMethod": {
-            "description": "",
-            "type": "string"
-          },
-          "query__groupMembershipAttribute": {
-            "description": "",
-            "type": "string"
-          },
-          "query__handleLogout": {
-            "description": "",
-            "type": "boolean"
-          },
-          "query__idpCertAlias": {
-            "description": "",
-            "type": "string"
-          },
-          "query__idpHttpRedirect": {
-            "description": "",
-            "type": "boolean"
-          },
-          "query__idpUrl": {
-            "description": "",
-            "type": "string"
-          },
-          "query__keyStorePassword": {
-            "description": "",
-            "type": "string"
-          },
-          "query__logoutUrl": {
-            "description": "",
-            "type": "string"
-          },
-          "query__nameIdFormat": {
-            "description": "",
-            "type": "string"
-          },
-          "query__path": {
-            "description": "",
-            "type": "array"
-          },
-          "query__post": {
-            "description": "",
-            "type": "boolean"
-          },
-          "query__propertylist": {
-            "description": "",
-            "type": "array"
-          },
-          "query__service.ranking": {
-            "description": "",
-            "type": "integer"
-          },
-          "query__serviceProviderEntityId": {
-            "description": "",
-            "type": "string"
-          },
-          "query__signatureMethod": {
-            "description": "",
-            "type": "string"
-          },
-          "query__spPrivateKeyAlias": {
-            "description": "",
-            "type": "string"
-          },
-          "query__synchronizeAttributes": {
-            "description": "",
-            "type": "array"
-          },
-          "query__useEncryption": {
-            "description": "",
-            "type": "boolean"
-          },
-          "query__userIDAttribute": {
-            "description": "",
-            "type": "string"
-          },
-          "query__userIntermediatePath": {
+          "query__bundles.ignored@TypeHint": {
             "description": "",
             "type": "string"
           }
         }
       },
       "annotations": {
-        "title": "postsamlconfiguration",
+        "title": "postconfigaemhealthcheckservlet",
         "idempotentHint": false
       },
       "oapiHandlerInput": {
         "method": "POST",
-        "path": "/system/console/configMgr/com.adobe.granite.auth.saml.SamlAuthenticationHandler",
-        "headers": {},
-        "cookies": {},
-        "bodyAppend": {}
-      }
-    },
-    {
-      "name": "postsetpassword",
-      "description": "POST /crx/explorer/ui/setpassword.jsp",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "query__old": {
-            "description": "",
-            "type": "string"
-          },
-          "query__plain": {
-            "description": "",
-            "type": "string"
-          },
-          "query__verify": {
-            "description": "",
-            "type": "string"
-          }
-        },
-        "required": [
-          "query__old",
-          "query__plain",
-          "query__verify"
-        ]
-      },
-      "annotations": {
-        "title": "postsetpassword",
-        "idempotentHint": false
-      },
-      "oapiHandlerInput": {
-        "method": "POST",
-        "path": "/crx/explorer/ui/setpassword.jsp",
-        "headers": {},
-        "cookies": {},
-        "bodyAppend": {}
-      }
-    },
-    {
-      "name": "postnoderw",
-      "description": "POST /{path}/{name}.rw.html",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "path__name": {
-            "description": "",
-            "type": "string"
-          },
-          "path__path": {
-            "description": "",
-            "type": "string"
-          },
-          "query__addMembers": {
-            "description": "",
-            "type": "string"
-          }
-        },
-        "required": [
-          "path__path",
-          "path__name"
-        ]
-      },
-      "annotations": {
-        "title": "postnoderw",
-        "idempotentHint": false
-      },
-      "oapiHandlerInput": {
-        "method": "POST",
-        "path": "/{path}/{name}.rw.html",
+        "path": "/apps/system/config/com.shinesolutions.healthcheck.hc.impl.ActiveBundleHealthCheck",
         "headers": {},
         "cookies": {},
         "bodyAppend": {}
@@ -263,204 +101,19 @@
       }
     },
     {
-      "name": "postconfigapacheslingdavexservlet",
-      "description": "POST /apps/system/config/org.apache.sling.jcr.davex.impl.servlets.SlingDavExServlet",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "query__alias": {
-            "description": "",
-            "type": "string"
-          },
-          "query__alias@TypeHint": {
-            "description": "",
-            "type": "string"
-          },
-          "query__dav.create-absolute-uri": {
-            "description": "",
-            "type": "boolean"
-          },
-          "query__dav.create-absolute-uri@TypeHint": {
-            "description": "",
-            "type": "string"
-          }
-        }
-      },
-      "annotations": {
-        "title": "postconfigapacheslingdavexservlet",
-        "idempotentHint": false
-      },
-      "oapiHandlerInput": {
-        "method": "POST",
-        "path": "/apps/system/config/org.apache.sling.jcr.davex.impl.servlets.SlingDavExServlet",
-        "headers": {},
-        "cookies": {},
-        "bodyAppend": {}
-      }
-    },
-    {
-      "name": "getpackagefilter",
-      "description": "GET /etc/packages/{group}/{name}-{version}.zip/jcr:content/vlt:definition/filter.tidy.2.json",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "path__group": {
-            "description": "",
-            "type": "string"
-          },
-          "path__name": {
-            "description": "",
-            "type": "string"
-          },
-          "path__version": {
-            "description": "",
-            "type": "string"
-          }
-        },
-        "required": [
-          "path__group",
-          "path__name",
-          "path__version"
-        ]
-      },
-      "annotations": {
-        "title": "getpackagefilter",
-        "readOnlyHint": true,
-        "idempotentHint": true
-      },
-      "oapiHandlerInput": {
-        "method": "GET",
-        "path": "/etc/packages/{group}/{name}-{version}.zip/jcr:content/vlt:definition/filter.tidy.2.json",
-        "headers": {},
-        "cookies": {},
-        "bodyAppend": {}
-      }
-    },
-    {
-      "name": "postconfigaempasswordreset",
-      "description": "POST /apps/system/config/com.shinesolutions.aem.passwordreset.Activator",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "query__pwdreset.authorizables": {
-            "description": "",
-            "type": "array"
-          },
-          "query__pwdreset.authorizables@TypeHint": {
-            "description": "",
-            "type": "string"
-          }
-        }
-      },
-      "annotations": {
-        "title": "postconfigaempasswordreset",
-        "idempotentHint": false
-      },
-      "oapiHandlerInput": {
-        "method": "POST",
-        "path": "/apps/system/config/com.shinesolutions.aem.passwordreset.Activator",
-        "headers": {},
-        "cookies": {},
-        "bodyAppend": {}
-      }
-    },
-    {
-      "name": "postpackageservicejson",
-      "description": "POST /crx/packmgr/service/.json/{path}",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "path__path": {
-            "description": "",
-            "type": "string"
-          },
-          "query___charset_": {
-            "description": "",
-            "type": "string"
-          },
-          "query__cmd": {
-            "description": "",
-            "type": "string"
-          },
-          "query__force": {
-            "description": "",
-            "type": "boolean"
-          },
-          "query__groupName": {
-            "description": "",
-            "type": "string"
-          },
-          "query__packageName": {
-            "description": "",
-            "type": "string"
-          },
-          "query__packageVersion": {
-            "description": "",
-            "type": "string"
-          },
-          "query__recursive": {
-            "description": "",
-            "type": "boolean"
-          }
-        },
-        "required": [
-          "path__path",
-          "query__cmd"
-        ]
-      },
-      "annotations": {
-        "title": "postpackageservicejson",
-        "idempotentHint": false
-      },
-      "oapiHandlerInput": {
-        "method": "POST",
-        "path": "/crx/packmgr/service/.json/{path}",
-        "headers": {},
-        "cookies": {},
-        "bodyAppend": {}
-      }
-    },
-    {
-      "name": "posttruststorepkcs12",
-      "description": "POST /etc/truststore",
+      "name": "getinstallstatus",
+      "description": "GET /crx/packmgr/installstatus.jsp",
       "inputSchema": {
         "type": "object"
       },
       "annotations": {
-        "title": "posttruststorepkcs12",
-        "idempotentHint": false
-      },
-      "oapiHandlerInput": {
-        "method": "POST",
-        "path": "/etc/truststore",
-        "headers": {},
-        "cookies": {},
-        "bodyAppend": {}
-      }
-    },
-    {
-      "name": "getbundleinfo",
-      "description": "GET /system/console/bundles/{name}.json",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "path__name": {
-            "description": "",
-            "type": "string"
-          }
-        },
-        "required": [
-          "path__name"
-        ]
-      },
-      "annotations": {
-        "title": "getbundleinfo",
+        "title": "getinstallstatus",
         "readOnlyHint": true,
         "idempotentHint": true
       },
       "oapiHandlerInput": {
         "method": "GET",
-        "path": "/system/console/bundles/{name}.json",
+        "path": "/crx/packmgr/installstatus.jsp",
         "headers": {},
         "cookies": {},
         "bodyAppend": {}
@@ -486,75 +139,27 @@
       }
     },
     {
-      "name": "getloginpage",
-      "description": "GET /libs/granite/core/content/login.html",
-      "inputSchema": {
-        "type": "object"
-      },
-      "annotations": {
-        "title": "getloginpage",
-        "readOnlyHint": true,
-        "idempotentHint": true
-      },
-      "oapiHandlerInput": {
-        "method": "GET",
-        "path": "/libs/granite/core/content/login.html",
-        "headers": {},
-        "cookies": {},
-        "bodyAppend": {}
-      }
-    },
-    {
-      "name": "postpath",
-      "description": "POST /{path}/",
+      "name": "postjmxrepository",
+      "description": "POST /system/console/jmx/com.adobe.granite:type=Repository/op/{action}",
       "inputSchema": {
         "type": "object",
         "properties": {
-          "path__path": {
-            "description": "",
-            "type": "string"
-          },
-          "query__:name": {
-            "description": "",
-            "type": "string"
-          },
-          "query__jcr:primaryType": {
+          "path__action": {
             "description": "",
             "type": "string"
           }
         },
         "required": [
-          "path__path",
-          "query__:name",
-          "query__jcr:primaryType"
+          "path__action"
         ]
       },
       "annotations": {
-        "title": "postpath",
+        "title": "postjmxrepository",
         "idempotentHint": false
       },
       "oapiHandlerInput": {
         "method": "POST",
-        "path": "/{path}/",
-        "headers": {},
-        "cookies": {},
-        "bodyAppend": {}
-      }
-    },
-    {
-      "name": "gettruststore",
-      "description": "GET /etc/truststore/truststore.p12",
-      "inputSchema": {
-        "type": "object"
-      },
-      "annotations": {
-        "title": "gettruststore",
-        "readOnlyHint": true,
-        "idempotentHint": true
-      },
-      "oapiHandlerInput": {
-        "method": "GET",
-        "path": "/etc/truststore/truststore.p12",
+        "path": "/system/console/jmx/com.adobe.granite:type=Repository/op/{action}",
         "headers": {},
         "cookies": {},
         "bodyAppend": {}
@@ -773,157 +378,6 @@
       }
     },
     {
-      "name": "postbundle",
-      "description": "POST /system/console/bundles/{name}",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "path__name": {
-            "description": "",
-            "type": "string"
-          },
-          "query__action": {
-            "description": "",
-            "type": "string"
-          }
-        },
-        "required": [
-          "path__name",
-          "query__action"
-        ]
-      },
-      "annotations": {
-        "title": "postbundle",
-        "idempotentHint": false
-      },
-      "oapiHandlerInput": {
-        "method": "POST",
-        "path": "/system/console/bundles/{name}",
-        "headers": {},
-        "cookies": {},
-        "bodyAppend": {}
-      }
-    },
-    {
-      "name": "postauthorizables",
-      "description": "POST /libs/granite/security/post/authorizables",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "query__authorizableId": {
-            "description": "",
-            "type": "string"
-          },
-          "query__createGroup": {
-            "description": "",
-            "type": "string"
-          },
-          "query__createUser": {
-            "description": "",
-            "type": "string"
-          },
-          "query__intermediatePath": {
-            "description": "",
-            "type": "string"
-          },
-          "query__profile/givenName": {
-            "description": "",
-            "type": "string"
-          },
-          "query__rep:password": {
-            "description": "",
-            "type": "string"
-          }
-        },
-        "required": [
-          "query__authorizableId",
-          "query__intermediatePath"
-        ]
-      },
-      "annotations": {
-        "title": "postauthorizables",
-        "idempotentHint": false
-      },
-      "oapiHandlerInput": {
-        "method": "POST",
-        "path": "/libs/granite/security/post/authorizables",
-        "headers": {},
-        "cookies": {},
-        "bodyAppend": {}
-      }
-    },
-    {
-      "name": "postconfigapacheslinggetservlet",
-      "description": "POST /apps/system/config/org.apache.sling.servlets.get.DefaultGetServlet",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "query__enable.html": {
-            "description": "",
-            "type": "boolean"
-          },
-          "query__enable.html@TypeHint": {
-            "description": "",
-            "type": "string"
-          },
-          "query__enable.txt": {
-            "description": "",
-            "type": "boolean"
-          },
-          "query__enable.txt@TypeHint": {
-            "description": "",
-            "type": "string"
-          },
-          "query__enable.xml": {
-            "description": "",
-            "type": "boolean"
-          },
-          "query__enable.xml@TypeHint": {
-            "description": "",
-            "type": "string"
-          },
-          "query__json.maximumresults": {
-            "description": "",
-            "type": "string"
-          },
-          "query__json.maximumresults@TypeHint": {
-            "description": "",
-            "type": "string"
-          }
-        }
-      },
-      "annotations": {
-        "title": "postconfigapacheslinggetservlet",
-        "idempotentHint": false
-      },
-      "oapiHandlerInput": {
-        "method": "POST",
-        "path": "/apps/system/config/org.apache.sling.servlets.get.DefaultGetServlet",
-        "headers": {},
-        "cookies": {},
-        "bodyAppend": {}
-      }
-    },
-    {
-      "name": "getinstallstatus",
-      "description": "GET /crx/packmgr/installstatus.jsp",
-      "inputSchema": {
-        "type": "object"
-      },
-      "annotations": {
-        "title": "getinstallstatus",
-        "readOnlyHint": true,
-        "idempotentHint": true
-      },
-      "oapiHandlerInput": {
-        "method": "GET",
-        "path": "/crx/packmgr/installstatus.jsp",
-        "headers": {},
-        "cookies": {},
-        "bodyAppend": {}
-      }
-    },
-    {
       "name": "getauthorizablekeystore",
       "description": "GET /{intermediatePath}/{authorizableId}.ks.json",
       "inputSchema": {
@@ -957,6 +411,598 @@
       }
     },
     {
+      "name": "getnode",
+      "description": "GET /{path}/{name}",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "path__name": {
+            "description": "",
+            "type": "string"
+          },
+          "path__path": {
+            "description": "",
+            "type": "string"
+          }
+        },
+        "required": [
+          "path__path",
+          "path__name"
+        ]
+      },
+      "annotations": {
+        "title": "getnode",
+        "readOnlyHint": true,
+        "idempotentHint": true
+      },
+      "oapiHandlerInput": {
+        "method": "GET",
+        "path": "/{path}/{name}",
+        "headers": {},
+        "cookies": {},
+        "bodyAppend": {}
+      }
+    },
+    {
+      "name": "postnode",
+      "description": "POST /{path}/{name}",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "body__file": {
+            "description": "",
+            "type": "string"
+          },
+          "path__name": {
+            "description": "",
+            "type": "string"
+          },
+          "path__path": {
+            "description": "",
+            "type": "string"
+          },
+          "query__:operation": {
+            "description": "",
+            "type": "string"
+          },
+          "query__deleteAuthorizable": {
+            "description": "",
+            "type": "string"
+          }
+        },
+        "required": [
+          "path__path",
+          "path__name"
+        ]
+      },
+      "annotations": {
+        "title": "postnode",
+        "idempotentHint": false
+      },
+      "oapiHandlerInput": {
+        "method": "POST",
+        "path": "/{path}/{name}",
+        "headers": {},
+        "cookies": {},
+        "bodyAppend": {},
+        "contentType": "multipart/form-data"
+      }
+    },
+    {
+      "name": "deletenode",
+      "description": "DELETE /{path}/{name}",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "path__name": {
+            "description": "",
+            "type": "string"
+          },
+          "path__path": {
+            "description": "",
+            "type": "string"
+          }
+        },
+        "required": [
+          "path__path",
+          "path__name"
+        ]
+      },
+      "annotations": {
+        "title": "deletenode",
+        "destructiveHint": true
+      },
+      "oapiHandlerInput": {
+        "method": "DELETE",
+        "path": "/{path}/{name}",
+        "headers": {},
+        "cookies": {},
+        "bodyAppend": {}
+      }
+    },
+    {
+      "name": "postconfigapachefelixjettybasedhttpservice",
+      "description": "POST /apps/system/config/org.apache.felix.http",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "query__org.apache.felix.https.clientcertificate": {
+            "description": "",
+            "type": "string"
+          },
+          "query__org.apache.felix.https.clientcertificate@TypeHint": {
+            "description": "",
+            "type": "string"
+          },
+          "query__org.apache.felix.https.enable": {
+            "description": "",
+            "type": "boolean"
+          },
+          "query__org.apache.felix.https.enable@TypeHint": {
+            "description": "",
+            "type": "string"
+          },
+          "query__org.apache.felix.https.keystore": {
+            "description": "",
+            "type": "string"
+          },
+          "query__org.apache.felix.https.keystore.key": {
+            "description": "",
+            "type": "string"
+          },
+          "query__org.apache.felix.https.keystore.key.password": {
+            "description": "",
+            "type": "string"
+          },
+          "query__org.apache.felix.https.keystore.key.password@TypeHint": {
+            "description": "",
+            "type": "string"
+          },
+          "query__org.apache.felix.https.keystore.key@TypeHint": {
+            "description": "",
+            "type": "string"
+          },
+          "query__org.apache.felix.https.keystore.password": {
+            "description": "",
+            "type": "string"
+          },
+          "query__org.apache.felix.https.keystore.password@TypeHint": {
+            "description": "",
+            "type": "string"
+          },
+          "query__org.apache.felix.https.keystore@TypeHint": {
+            "description": "",
+            "type": "string"
+          },
+          "query__org.apache.felix.https.nio": {
+            "description": "",
+            "type": "boolean"
+          },
+          "query__org.apache.felix.https.nio@TypeHint": {
+            "description": "",
+            "type": "string"
+          },
+          "query__org.apache.felix.https.truststore": {
+            "description": "",
+            "type": "string"
+          },
+          "query__org.apache.felix.https.truststore.password": {
+            "description": "",
+            "type": "string"
+          },
+          "query__org.apache.felix.https.truststore.password@TypeHint": {
+            "description": "",
+            "type": "string"
+          },
+          "query__org.apache.felix.https.truststore@TypeHint": {
+            "description": "",
+            "type": "string"
+          },
+          "query__org.osgi.service.http.port.secure": {
+            "description": "",
+            "type": "string"
+          },
+          "query__org.osgi.service.http.port.secure@TypeHint": {
+            "description": "",
+            "type": "string"
+          }
+        }
+      },
+      "annotations": {
+        "title": "postconfigapachefelixjettybasedhttpservice",
+        "idempotentHint": false
+      },
+      "oapiHandlerInput": {
+        "method": "POST",
+        "path": "/apps/system/config/org.apache.felix.http",
+        "headers": {},
+        "cookies": {},
+        "bodyAppend": {}
+      }
+    },
+    {
+      "name": "postauthorizablekeystore",
+      "description": "POST /{intermediatePath}/{authorizableId}.ks.html",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "body__cert-chain": {
+            "description": "",
+            "type": "string"
+          },
+          "body__keyStore": {
+            "description": "",
+            "type": "string"
+          },
+          "body__pk": {
+            "description": "",
+            "type": "string"
+          },
+          "path__authorizableId": {
+            "description": "",
+            "type": "string"
+          },
+          "path__intermediatePath": {
+            "description": "",
+            "type": "string"
+          },
+          "query__:operation": {
+            "description": "",
+            "type": "string"
+          },
+          "query__alias": {
+            "description": "",
+            "type": "string"
+          },
+          "query__currentPassword": {
+            "description": "",
+            "type": "string"
+          },
+          "query__keyPassword": {
+            "description": "",
+            "type": "string"
+          },
+          "query__keyStorePass": {
+            "description": "",
+            "type": "string"
+          },
+          "query__newAlias": {
+            "description": "",
+            "type": "string"
+          },
+          "query__newPassword": {
+            "description": "",
+            "type": "string"
+          },
+          "query__rePassword": {
+            "description": "",
+            "type": "string"
+          },
+          "query__removeAlias": {
+            "description": "",
+            "type": "string"
+          }
+        },
+        "required": [
+          "path__intermediatePath",
+          "path__authorizableId"
+        ]
+      },
+      "annotations": {
+        "title": "postauthorizablekeystore",
+        "idempotentHint": false
+      },
+      "oapiHandlerInput": {
+        "method": "POST",
+        "path": "/{intermediatePath}/{authorizableId}.ks.html",
+        "headers": {},
+        "cookies": {},
+        "bodyAppend": {},
+        "contentType": "multipart/form-data"
+      }
+    },
+    {
+      "name": "postconfigapacheslingreferrerfilter",
+      "description": "POST /apps/system/config/org.apache.sling.security.impl.ReferrerFilter",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "query__allow.empty": {
+            "description": "",
+            "type": "boolean"
+          },
+          "query__allow.empty@TypeHint": {
+            "description": "",
+            "type": "string"
+          },
+          "query__allow.hosts": {
+            "description": "",
+            "type": "string"
+          },
+          "query__allow.hosts.regexp": {
+            "description": "",
+            "type": "string"
+          },
+          "query__allow.hosts.regexp@TypeHint": {
+            "description": "",
+            "type": "string"
+          },
+          "query__allow.hosts@TypeHint": {
+            "description": "",
+            "type": "string"
+          },
+          "query__filter.methods": {
+            "description": "",
+            "type": "string"
+          },
+          "query__filter.methods@TypeHint": {
+            "description": "",
+            "type": "string"
+          }
+        }
+      },
+      "annotations": {
+        "title": "postconfigapacheslingreferrerfilter",
+        "idempotentHint": false
+      },
+      "oapiHandlerInput": {
+        "method": "POST",
+        "path": "/apps/system/config/org.apache.sling.security.impl.ReferrerFilter",
+        "headers": {},
+        "cookies": {},
+        "bodyAppend": {}
+      }
+    },
+    {
+      "name": "postpackageservice",
+      "description": "POST /crx/packmgr/service.jsp",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "query__cmd": {
+            "description": "",
+            "type": "string"
+          }
+        },
+        "required": [
+          "query__cmd"
+        ]
+      },
+      "annotations": {
+        "title": "postpackageservice",
+        "idempotentHint": false
+      },
+      "oapiHandlerInput": {
+        "method": "POST",
+        "path": "/crx/packmgr/service.jsp",
+        "headers": {},
+        "cookies": {},
+        "bodyAppend": {}
+      }
+    },
+    {
+      "name": "getagents",
+      "description": "GET /etc/replication/agents.{runmode}.-1.json",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "path__runmode": {
+            "description": "",
+            "type": "string"
+          }
+        },
+        "required": [
+          "path__runmode"
+        ]
+      },
+      "annotations": {
+        "title": "getagents",
+        "readOnlyHint": true,
+        "idempotentHint": true
+      },
+      "oapiHandlerInput": {
+        "method": "GET",
+        "path": "/etc/replication/agents.{runmode}.-1.json",
+        "headers": {},
+        "cookies": {},
+        "bodyAppend": {}
+      }
+    },
+    {
+      "name": "postpath",
+      "description": "POST /{path}/",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "path__path": {
+            "description": "",
+            "type": "string"
+          },
+          "query__:name": {
+            "description": "",
+            "type": "string"
+          },
+          "query__jcr:primaryType": {
+            "description": "",
+            "type": "string"
+          }
+        },
+        "required": [
+          "path__path",
+          "query__jcr:primaryType",
+          "query__:name"
+        ]
+      },
+      "annotations": {
+        "title": "postpath",
+        "idempotentHint": false
+      },
+      "oapiHandlerInput": {
+        "method": "POST",
+        "path": "/{path}/",
+        "headers": {},
+        "cookies": {},
+        "bodyAppend": {}
+      }
+    },
+    {
+      "name": "getpackagefilter",
+      "description": "GET /etc/packages/{group}/{name}-{version}.zip/jcr:content/vlt:definition/filter.tidy.2.json",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "path__group": {
+            "description": "",
+            "type": "string"
+          },
+          "path__name": {
+            "description": "",
+            "type": "string"
+          },
+          "path__version": {
+            "description": "",
+            "type": "string"
+          }
+        },
+        "required": [
+          "path__group",
+          "path__name",
+          "path__version"
+        ]
+      },
+      "annotations": {
+        "title": "getpackagefilter",
+        "readOnlyHint": true,
+        "idempotentHint": true
+      },
+      "oapiHandlerInput": {
+        "method": "GET",
+        "path": "/etc/packages/{group}/{name}-{version}.zip/jcr:content/vlt:definition/filter.tidy.2.json",
+        "headers": {},
+        "cookies": {},
+        "bodyAppend": {}
+      }
+    },
+    {
+      "name": "gettruststore",
+      "description": "GET /etc/truststore/truststore.p12",
+      "inputSchema": {
+        "type": "object"
+      },
+      "annotations": {
+        "title": "gettruststore",
+        "readOnlyHint": true,
+        "idempotentHint": true
+      },
+      "oapiHandlerInput": {
+        "method": "GET",
+        "path": "/etc/truststore/truststore.p12",
+        "headers": {},
+        "cookies": {},
+        "bodyAppend": {}
+      }
+    },
+    {
+      "name": "postconfigapachehttpcomponentsproxyconfiguration",
+      "description": "POST /apps/system/config/org.apache.http.proxyconfigurator.config",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "query__proxy.enabled": {
+            "description": "",
+            "type": "boolean"
+          },
+          "query__proxy.enabled@TypeHint": {
+            "description": "",
+            "type": "string"
+          },
+          "query__proxy.exceptions": {
+            "description": "",
+            "type": "array"
+          },
+          "query__proxy.exceptions@TypeHint": {
+            "description": "",
+            "type": "string"
+          },
+          "query__proxy.host": {
+            "description": "",
+            "type": "string"
+          },
+          "query__proxy.host@TypeHint": {
+            "description": "",
+            "type": "string"
+          },
+          "query__proxy.password": {
+            "description": "",
+            "type": "string"
+          },
+          "query__proxy.password@TypeHint": {
+            "description": "",
+            "type": "string"
+          },
+          "query__proxy.port": {
+            "description": "",
+            "type": "integer"
+          },
+          "query__proxy.port@TypeHint": {
+            "description": "",
+            "type": "string"
+          },
+          "query__proxy.user": {
+            "description": "",
+            "type": "string"
+          },
+          "query__proxy.user@TypeHint": {
+            "description": "",
+            "type": "string"
+          }
+        }
+      },
+      "annotations": {
+        "title": "postconfigapachehttpcomponentsproxyconfiguration",
+        "idempotentHint": false
+      },
+      "oapiHandlerInput": {
+        "method": "POST",
+        "path": "/apps/system/config/org.apache.http.proxyconfigurator.config",
+        "headers": {},
+        "cookies": {},
+        "bodyAppend": {}
+      }
+    },
+    {
+      "name": "postbundle",
+      "description": "POST /system/console/bundles/{name}",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "path__name": {
+            "description": "",
+            "type": "string"
+          },
+          "query__action": {
+            "description": "",
+            "type": "string"
+          }
+        },
+        "required": [
+          "path__name",
+          "query__action"
+        ]
+      },
+      "annotations": {
+        "title": "postbundle",
+        "idempotentHint": false
+      },
+      "oapiHandlerInput": {
+        "method": "POST",
+        "path": "/system/console/bundles/{name}",
+        "headers": {},
+        "cookies": {},
+        "bodyAppend": {}
+      }
+    },
+    {
       "name": "getpackagemanagerservlet",
       "description": "GET /crx/packmgr/service/script.html",
       "inputSchema": {
@@ -970,6 +1016,208 @@
       "oapiHandlerInput": {
         "method": "GET",
         "path": "/crx/packmgr/service/script.html",
+        "headers": {},
+        "cookies": {},
+        "bodyAppend": {}
+      }
+    },
+    {
+      "name": "getpackage",
+      "description": "GET /etc/packages/{group}/{name}-{version}.zip",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "path__group": {
+            "description": "",
+            "type": "string"
+          },
+          "path__name": {
+            "description": "",
+            "type": "string"
+          },
+          "path__version": {
+            "description": "",
+            "type": "string"
+          }
+        },
+        "required": [
+          "path__group",
+          "path__name",
+          "path__version"
+        ]
+      },
+      "annotations": {
+        "title": "getpackage",
+        "readOnlyHint": true,
+        "idempotentHint": true
+      },
+      "oapiHandlerInput": {
+        "method": "GET",
+        "path": "/etc/packages/{group}/{name}-{version}.zip",
+        "headers": {},
+        "cookies": {},
+        "bodyAppend": {}
+      }
+    },
+    {
+      "name": "getbundleinfo",
+      "description": "GET /system/console/bundles/{name}.json",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "path__name": {
+            "description": "",
+            "type": "string"
+          }
+        },
+        "required": [
+          "path__name"
+        ]
+      },
+      "annotations": {
+        "title": "getbundleinfo",
+        "readOnlyHint": true,
+        "idempotentHint": true
+      },
+      "oapiHandlerInput": {
+        "method": "GET",
+        "path": "/system/console/bundles/{name}.json",
+        "headers": {},
+        "cookies": {},
+        "bodyAppend": {}
+      }
+    },
+    {
+      "name": "postcqactions",
+      "description": "POST /.cqactions.html",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "query__authorizableId": {
+            "description": "",
+            "type": "string"
+          },
+          "query__changelog": {
+            "description": "",
+            "type": "string"
+          }
+        },
+        "required": [
+          "query__authorizableId",
+          "query__changelog"
+        ]
+      },
+      "annotations": {
+        "title": "postcqactions",
+        "idempotentHint": false
+      },
+      "oapiHandlerInput": {
+        "method": "POST",
+        "path": "/.cqactions.html",
+        "headers": {},
+        "cookies": {},
+        "bodyAppend": {}
+      }
+    },
+    {
+      "name": "getquery",
+      "description": "GET /bin/querybuilder.json",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "query__1_property": {
+            "description": "",
+            "type": "string"
+          },
+          "query__1_property.value": {
+            "description": "",
+            "type": "string"
+          },
+          "query__p.limit": {
+            "description": "",
+            "type": "number"
+          },
+          "query__path": {
+            "description": "",
+            "type": "string"
+          }
+        },
+        "required": [
+          "query__path",
+          "query__p.limit",
+          "query__1_property",
+          "query__1_property.value"
+        ]
+      },
+      "annotations": {
+        "title": "getquery",
+        "readOnlyHint": true,
+        "idempotentHint": true
+      },
+      "oapiHandlerInput": {
+        "method": "GET",
+        "path": "/bin/querybuilder.json",
+        "headers": {},
+        "cookies": {},
+        "bodyAppend": {}
+      }
+    },
+    {
+      "name": "postquery",
+      "description": "POST /bin/querybuilder.json",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "query__1_property": {
+            "description": "",
+            "type": "string"
+          },
+          "query__1_property.value": {
+            "description": "",
+            "type": "string"
+          },
+          "query__p.limit": {
+            "description": "",
+            "type": "number"
+          },
+          "query__path": {
+            "description": "",
+            "type": "string"
+          }
+        },
+        "required": [
+          "query__path",
+          "query__p.limit",
+          "query__1_property",
+          "query__1_property.value"
+        ]
+      },
+      "annotations": {
+        "title": "postquery",
+        "idempotentHint": false
+      },
+      "oapiHandlerInput": {
+        "method": "POST",
+        "path": "/bin/querybuilder.json",
+        "headers": {},
+        "cookies": {},
+        "bodyAppend": {}
+      }
+    },
+    {
+      "name": "getcrxdestatus",
+      "description": "GET /crx/server/crx.default/jcr:root/.1.json",
+      "inputSchema": {
+        "type": "object"
+      },
+      "annotations": {
+        "title": "getcrxdestatus",
+        "readOnlyHint": true,
+        "idempotentHint": true
+      },
+      "oapiHandlerInput": {
+        "method": "GET",
+        "path": "/crx/server/crx.default/jcr:root/.1.json",
         "headers": {},
         "cookies": {},
         "bodyAppend": {}
@@ -1023,8 +1271,8 @@
           }
         },
         "required": [
-          "path__runmode",
-          "path__name"
+          "path__name",
+          "path__runmode"
         ]
       },
       "annotations": {
@@ -1273,310 +1521,64 @@
       }
     },
     {
-      "name": "posttreeactivation",
-      "description": "POST /libs/replication/treeactivation.html",
+      "name": "sslsetup",
+      "description": "POST /libs/granite/security/post/sslSetup.html",
       "inputSchema": {
         "type": "object",
         "properties": {
-          "query__cmd": {
+          "body__certificateFile": {
             "description": "",
             "type": "string"
           },
-          "query__ignoredeactivated": {
+          "body__privatekeyFile": {
             "description": "",
-            "type": "boolean"
+            "type": "string"
           },
-          "query__onlymodified": {
+          "query__httpsHostname": {
             "description": "",
-            "type": "boolean"
+            "type": "string"
           },
-          "query__path": {
+          "query__httpsPort": {
+            "description": "",
+            "type": "string"
+          },
+          "query__keystorePassword": {
+            "description": "",
+            "type": "string"
+          },
+          "query__keystorePasswordConfirm": {
+            "description": "",
+            "type": "string"
+          },
+          "query__truststorePassword": {
+            "description": "",
+            "type": "string"
+          },
+          "query__truststorePasswordConfirm": {
             "description": "",
             "type": "string"
           }
         },
         "required": [
-          "query__cmd",
-          "query__ignoredeactivated",
-          "query__onlymodified",
-          "query__path"
+          "query__keystorePasswordConfirm",
+          "query__truststorePassword",
+          "query__truststorePasswordConfirm",
+          "query__httpsHostname",
+          "query__httpsPort",
+          "query__keystorePassword"
         ]
       },
       "annotations": {
-        "title": "posttreeactivation",
+        "title": "sslsetup",
         "idempotentHint": false
       },
       "oapiHandlerInput": {
         "method": "POST",
-        "path": "/libs/replication/treeactivation.html",
+        "path": "/libs/granite/security/post/sslSetup.html",
         "headers": {},
         "cookies": {},
-        "bodyAppend": {}
-      }
-    },
-    {
-      "name": "getaemproductinfo",
-      "description": "GET /system/console/status-productinfo.json",
-      "inputSchema": {
-        "type": "object"
-      },
-      "annotations": {
-        "title": "getaemproductinfo",
-        "readOnlyHint": true,
-        "idempotentHint": true
-      },
-      "oapiHandlerInput": {
-        "method": "GET",
-        "path": "/system/console/status-productinfo.json",
-        "headers": {},
-        "cookies": {},
-        "bodyAppend": {}
-      }
-    },
-    {
-      "name": "postconfigaemhealthcheckservlet",
-      "description": "POST /apps/system/config/com.shinesolutions.healthcheck.hc.impl.ActiveBundleHealthCheck",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "query__bundles.ignored": {
-            "description": "",
-            "type": "array"
-          },
-          "query__bundles.ignored@TypeHint": {
-            "description": "",
-            "type": "string"
-          }
-        }
-      },
-      "annotations": {
-        "title": "postconfigaemhealthcheckservlet",
-        "idempotentHint": false
-      },
-      "oapiHandlerInput": {
-        "method": "POST",
-        "path": "/apps/system/config/com.shinesolutions.healthcheck.hc.impl.ActiveBundleHealthCheck",
-        "headers": {},
-        "cookies": {},
-        "bodyAppend": {}
-      }
-    },
-    {
-      "name": "getquery",
-      "description": "GET /bin/querybuilder.json",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "query__1_property": {
-            "description": "",
-            "type": "string"
-          },
-          "query__1_property.value": {
-            "description": "",
-            "type": "string"
-          },
-          "query__p.limit": {
-            "description": "",
-            "type": "number"
-          },
-          "query__path": {
-            "description": "",
-            "type": "string"
-          }
-        },
-        "required": [
-          "query__path",
-          "query__p.limit",
-          "query__1_property",
-          "query__1_property.value"
-        ]
-      },
-      "annotations": {
-        "title": "getquery",
-        "readOnlyHint": true,
-        "idempotentHint": true
-      },
-      "oapiHandlerInput": {
-        "method": "GET",
-        "path": "/bin/querybuilder.json",
-        "headers": {},
-        "cookies": {},
-        "bodyAppend": {}
-      }
-    },
-    {
-      "name": "postquery",
-      "description": "POST /bin/querybuilder.json",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "query__1_property": {
-            "description": "",
-            "type": "string"
-          },
-          "query__1_property.value": {
-            "description": "",
-            "type": "string"
-          },
-          "query__p.limit": {
-            "description": "",
-            "type": "number"
-          },
-          "query__path": {
-            "description": "",
-            "type": "string"
-          }
-        },
-        "required": [
-          "query__path",
-          "query__p.limit",
-          "query__1_property",
-          "query__1_property.value"
-        ]
-      },
-      "annotations": {
-        "title": "postquery",
-        "idempotentHint": false
-      },
-      "oapiHandlerInput": {
-        "method": "POST",
-        "path": "/bin/querybuilder.json",
-        "headers": {},
-        "cookies": {},
-        "bodyAppend": {}
-      }
-    },
-    {
-      "name": "getnode",
-      "description": "GET /{path}/{name}",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "path__name": {
-            "description": "",
-            "type": "string"
-          },
-          "path__path": {
-            "description": "",
-            "type": "string"
-          }
-        },
-        "required": [
-          "path__path",
-          "path__name"
-        ]
-      },
-      "annotations": {
-        "title": "getnode",
-        "readOnlyHint": true,
-        "idempotentHint": true
-      },
-      "oapiHandlerInput": {
-        "method": "GET",
-        "path": "/{path}/{name}",
-        "headers": {},
-        "cookies": {},
-        "bodyAppend": {}
-      }
-    },
-    {
-      "name": "postnode",
-      "description": "POST /{path}/{name}",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "path__name": {
-            "description": "",
-            "type": "string"
-          },
-          "path__path": {
-            "description": "",
-            "type": "string"
-          },
-          "query__:operation": {
-            "description": "",
-            "type": "string"
-          },
-          "query__deleteAuthorizable": {
-            "description": "",
-            "type": "string"
-          }
-        },
-        "required": [
-          "path__path",
-          "path__name"
-        ]
-      },
-      "annotations": {
-        "title": "postnode",
-        "idempotentHint": false
-      },
-      "oapiHandlerInput": {
-        "method": "POST",
-        "path": "/{path}/{name}",
-        "headers": {},
-        "cookies": {},
-        "bodyAppend": {}
-      }
-    },
-    {
-      "name": "deletenode",
-      "description": "DELETE /{path}/{name}",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "path__name": {
-            "description": "",
-            "type": "string"
-          },
-          "path__path": {
-            "description": "",
-            "type": "string"
-          }
-        },
-        "required": [
-          "path__name",
-          "path__path"
-        ]
-      },
-      "annotations": {
-        "title": "deletenode",
-        "destructiveHint": true
-      },
-      "oapiHandlerInput": {
-        "method": "DELETE",
-        "path": "/{path}/{name}",
-        "headers": {},
-        "cookies": {},
-        "bodyAppend": {}
-      }
-    },
-    {
-      "name": "getagents",
-      "description": "GET /etc/replication/agents.{runmode}.-1.json",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "path__runmode": {
-            "description": "",
-            "type": "string"
-          }
-        },
-        "required": [
-          "path__runmode"
-        ]
-      },
-      "annotations": {
-        "title": "getagents",
-        "readOnlyHint": true,
-        "idempotentHint": true
-      },
-      "oapiHandlerInput": {
-        "method": "GET",
-        "path": "/etc/replication/agents.{runmode}.-1.json",
-        "headers": {},
-        "cookies": {},
-        "bodyAppend": {}
+        "bodyAppend": {},
+        "contentType": "multipart/form-data"
       }
     },
     {
@@ -1585,6 +1587,10 @@
       "inputSchema": {
         "type": "object",
         "properties": {
+          "body__certificate": {
+            "description": "",
+            "type": "string"
+          },
           "query__:operation": {
             "description": "",
             "type": "string"
@@ -1616,31 +1622,155 @@
         "path": "/libs/granite/security/post/truststore",
         "headers": {},
         "cookies": {},
-        "bodyAppend": {}
+        "bodyAppend": {},
+        "contentType": "multipart/form-data"
       }
     },
     {
-      "name": "postjmxrepository",
-      "description": "POST /system/console/jmx/com.adobe.granite:type=Repository/op/{action}",
+      "name": "postsetpassword",
+      "description": "POST /crx/explorer/ui/setpassword.jsp",
       "inputSchema": {
         "type": "object",
         "properties": {
-          "path__action": {
+          "query__old": {
+            "description": "",
+            "type": "string"
+          },
+          "query__plain": {
+            "description": "",
+            "type": "string"
+          },
+          "query__verify": {
             "description": "",
             "type": "string"
           }
         },
         "required": [
-          "path__action"
+          "query__old",
+          "query__plain",
+          "query__verify"
         ]
       },
       "annotations": {
-        "title": "postjmxrepository",
+        "title": "postsetpassword",
         "idempotentHint": false
       },
       "oapiHandlerInput": {
         "method": "POST",
-        "path": "/system/console/jmx/com.adobe.granite:type=Repository/op/{action}",
+        "path": "/crx/explorer/ui/setpassword.jsp",
+        "headers": {},
+        "cookies": {},
+        "bodyAppend": {}
+      }
+    },
+    {
+      "name": "postpackageservicejson",
+      "description": "POST /crx/packmgr/service/.json/{path}",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "body__package": {
+            "description": "",
+            "type": "string"
+          },
+          "path__path": {
+            "description": "",
+            "type": "string"
+          },
+          "query___charset_": {
+            "description": "",
+            "type": "string"
+          },
+          "query__cmd": {
+            "description": "",
+            "type": "string"
+          },
+          "query__force": {
+            "description": "",
+            "type": "boolean"
+          },
+          "query__groupName": {
+            "description": "",
+            "type": "string"
+          },
+          "query__packageName": {
+            "description": "",
+            "type": "string"
+          },
+          "query__packageVersion": {
+            "description": "",
+            "type": "string"
+          },
+          "query__recursive": {
+            "description": "",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "path__path",
+          "query__cmd"
+        ]
+      },
+      "annotations": {
+        "title": "postpackageservicejson",
+        "idempotentHint": false
+      },
+      "oapiHandlerInput": {
+        "method": "POST",
+        "path": "/crx/packmgr/service/.json/{path}",
+        "headers": {},
+        "cookies": {},
+        "bodyAppend": {},
+        "contentType": "multipart/form-data"
+      }
+    },
+    {
+      "name": "postconfigapacheslinggetservlet",
+      "description": "POST /apps/system/config/org.apache.sling.servlets.get.DefaultGetServlet",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "query__enable.html": {
+            "description": "",
+            "type": "boolean"
+          },
+          "query__enable.html@TypeHint": {
+            "description": "",
+            "type": "string"
+          },
+          "query__enable.txt": {
+            "description": "",
+            "type": "boolean"
+          },
+          "query__enable.txt@TypeHint": {
+            "description": "",
+            "type": "string"
+          },
+          "query__enable.xml": {
+            "description": "",
+            "type": "boolean"
+          },
+          "query__enable.xml@TypeHint": {
+            "description": "",
+            "type": "string"
+          },
+          "query__json.maximumresults": {
+            "description": "",
+            "type": "string"
+          },
+          "query__json.maximumresults@TypeHint": {
+            "description": "",
+            "type": "string"
+          }
+        }
+      },
+      "annotations": {
+        "title": "postconfigapacheslinggetservlet",
+        "idempotentHint": false
+      },
+      "oapiHandlerInput": {
+        "method": "POST",
+        "path": "/apps/system/config/org.apache.sling.servlets.get.DefaultGetServlet",
         "headers": {},
         "cookies": {},
         "bodyAppend": {}
@@ -1680,328 +1810,36 @@
       }
     },
     {
-      "name": "sslsetup",
-      "description": "POST /libs/granite/security/post/sslSetup.html",
+      "name": "postconfigapacheslingdavexservlet",
+      "description": "POST /apps/system/config/org.apache.sling.jcr.davex.impl.servlets.SlingDavExServlet",
       "inputSchema": {
         "type": "object",
         "properties": {
-          "query__httpsHostname": {
-            "description": "",
-            "type": "string"
-          },
-          "query__httpsPort": {
-            "description": "",
-            "type": "string"
-          },
-          "query__keystorePassword": {
-            "description": "",
-            "type": "string"
-          },
-          "query__keystorePasswordConfirm": {
-            "description": "",
-            "type": "string"
-          },
-          "query__truststorePassword": {
-            "description": "",
-            "type": "string"
-          },
-          "query__truststorePasswordConfirm": {
-            "description": "",
-            "type": "string"
-          }
-        },
-        "required": [
-          "query__keystorePassword",
-          "query__keystorePasswordConfirm",
-          "query__truststorePassword",
-          "query__truststorePasswordConfirm",
-          "query__httpsHostname",
-          "query__httpsPort"
-        ]
-      },
-      "annotations": {
-        "title": "sslsetup",
-        "idempotentHint": false
-      },
-      "oapiHandlerInput": {
-        "method": "POST",
-        "path": "/libs/granite/security/post/sslSetup.html",
-        "headers": {},
-        "cookies": {},
-        "bodyAppend": {}
-      }
-    },
-    {
-      "name": "postconfigapachehttpcomponentsproxyconfiguration",
-      "description": "POST /apps/system/config/org.apache.http.proxyconfigurator.config",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "query__proxy.enabled": {
-            "description": "",
-            "type": "boolean"
-          },
-          "query__proxy.enabled@TypeHint": {
-            "description": "",
-            "type": "string"
-          },
-          "query__proxy.exceptions": {
-            "description": "",
-            "type": "array"
-          },
-          "query__proxy.exceptions@TypeHint": {
-            "description": "",
-            "type": "string"
-          },
-          "query__proxy.host": {
-            "description": "",
-            "type": "string"
-          },
-          "query__proxy.host@TypeHint": {
-            "description": "",
-            "type": "string"
-          },
-          "query__proxy.password": {
-            "description": "",
-            "type": "string"
-          },
-          "query__proxy.password@TypeHint": {
-            "description": "",
-            "type": "string"
-          },
-          "query__proxy.port": {
-            "description": "",
-            "type": "integer"
-          },
-          "query__proxy.port@TypeHint": {
-            "description": "",
-            "type": "string"
-          },
-          "query__proxy.user": {
-            "description": "",
-            "type": "string"
-          },
-          "query__proxy.user@TypeHint": {
-            "description": "",
-            "type": "string"
-          }
-        }
-      },
-      "annotations": {
-        "title": "postconfigapachehttpcomponentsproxyconfiguration",
-        "idempotentHint": false
-      },
-      "oapiHandlerInput": {
-        "method": "POST",
-        "path": "/apps/system/config/org.apache.http.proxyconfigurator.config",
-        "headers": {},
-        "cookies": {},
-        "bodyAppend": {}
-      }
-    },
-    {
-      "name": "getaemhealthcheck",
-      "description": "GET /system/health",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "query__combineTagsOr": {
-            "description": "",
-            "type": "boolean"
-          },
-          "query__tags": {
-            "description": "",
-            "type": "string"
-          }
-        }
-      },
-      "annotations": {
-        "title": "getaemhealthcheck",
-        "readOnlyHint": true,
-        "idempotentHint": true
-      },
-      "oapiHandlerInput": {
-        "method": "GET",
-        "path": "/system/health",
-        "headers": {},
-        "cookies": {},
-        "bodyAppend": {}
-      }
-    },
-    {
-      "name": "postauthorizablekeystore",
-      "description": "POST /{intermediatePath}/{authorizableId}.ks.html",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "path__authorizableId": {
-            "description": "",
-            "type": "string"
-          },
-          "path__intermediatePath": {
-            "description": "",
-            "type": "string"
-          },
-          "query__:operation": {
-            "description": "",
-            "type": "string"
-          },
           "query__alias": {
             "description": "",
             "type": "string"
           },
-          "query__currentPassword": {
+          "query__alias@TypeHint": {
             "description": "",
             "type": "string"
           },
-          "query__keyPassword": {
-            "description": "",
-            "type": "string"
-          },
-          "query__keyStorePass": {
-            "description": "",
-            "type": "string"
-          },
-          "query__newAlias": {
-            "description": "",
-            "type": "string"
-          },
-          "query__newPassword": {
-            "description": "",
-            "type": "string"
-          },
-          "query__rePassword": {
-            "description": "",
-            "type": "string"
-          },
-          "query__removeAlias": {
-            "description": "",
-            "type": "string"
-          }
-        },
-        "required": [
-          "path__intermediatePath",
-          "path__authorizableId"
-        ]
-      },
-      "annotations": {
-        "title": "postauthorizablekeystore",
-        "idempotentHint": false
-      },
-      "oapiHandlerInput": {
-        "method": "POST",
-        "path": "/{intermediatePath}/{authorizableId}.ks.html",
-        "headers": {},
-        "cookies": {},
-        "bodyAppend": {}
-      }
-    },
-    {
-      "name": "postcqactions",
-      "description": "POST /.cqactions.html",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "query__authorizableId": {
-            "description": "",
-            "type": "string"
-          },
-          "query__changelog": {
-            "description": "",
-            "type": "string"
-          }
-        },
-        "required": [
-          "query__authorizableId",
-          "query__changelog"
-        ]
-      },
-      "annotations": {
-        "title": "postcqactions",
-        "idempotentHint": false
-      },
-      "oapiHandlerInput": {
-        "method": "POST",
-        "path": "/.cqactions.html",
-        "headers": {},
-        "cookies": {},
-        "bodyAppend": {}
-      }
-    },
-    {
-      "name": "postconfigapacheslingreferrerfilter",
-      "description": "POST /apps/system/config/org.apache.sling.security.impl.ReferrerFilter",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "query__allow.empty": {
+          "query__dav.create-absolute-uri": {
             "description": "",
             "type": "boolean"
           },
-          "query__allow.empty@TypeHint": {
-            "description": "",
-            "type": "string"
-          },
-          "query__allow.hosts": {
-            "description": "",
-            "type": "string"
-          },
-          "query__allow.hosts.regexp": {
-            "description": "",
-            "type": "string"
-          },
-          "query__allow.hosts.regexp@TypeHint": {
-            "description": "",
-            "type": "string"
-          },
-          "query__allow.hosts@TypeHint": {
-            "description": "",
-            "type": "string"
-          },
-          "query__filter.methods": {
-            "description": "",
-            "type": "string"
-          },
-          "query__filter.methods@TypeHint": {
+          "query__dav.create-absolute-uri@TypeHint": {
             "description": "",
             "type": "string"
           }
         }
       },
       "annotations": {
-        "title": "postconfigapacheslingreferrerfilter",
+        "title": "postconfigapacheslingdavexservlet",
         "idempotentHint": false
       },
       "oapiHandlerInput": {
         "method": "POST",
-        "path": "/apps/system/config/org.apache.sling.security.impl.ReferrerFilter",
-        "headers": {},
-        "cookies": {},
-        "bodyAppend": {}
-      }
-    },
-    {
-      "name": "postpackageservice",
-      "description": "POST /crx/packmgr/service.jsp",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "query__cmd": {
-            "description": "",
-            "type": "string"
-          }
-        },
-        "required": [
-          "query__cmd"
-        ]
-      },
-      "annotations": {
-        "title": "postpackageservice",
-        "idempotentHint": false
-      },
-      "oapiHandlerInput": {
-        "method": "POST",
-        "path": "/crx/packmgr/service.jsp",
+        "path": "/apps/system/config/org.apache.sling.jcr.davex.impl.servlets.SlingDavExServlet",
         "headers": {},
         "cookies": {},
         "bodyAppend": {}
@@ -2027,38 +1865,72 @@
       }
     },
     {
-      "name": "getpackage",
-      "description": "GET /etc/packages/{group}/{name}-{version}.zip",
+      "name": "getloginpage",
+      "description": "GET /libs/granite/core/content/login.html",
       "inputSchema": {
-        "type": "object",
-        "properties": {
-          "path__group": {
-            "description": "",
-            "type": "string"
-          },
-          "path__name": {
-            "description": "",
-            "type": "string"
-          },
-          "path__version": {
-            "description": "",
-            "type": "string"
-          }
-        },
-        "required": [
-          "path__version",
-          "path__group",
-          "path__name"
-        ]
+        "type": "object"
       },
       "annotations": {
-        "title": "getpackage",
+        "title": "getloginpage",
         "readOnlyHint": true,
         "idempotentHint": true
       },
       "oapiHandlerInput": {
         "method": "GET",
-        "path": "/etc/packages/{group}/{name}-{version}.zip",
+        "path": "/libs/granite/core/content/login.html",
+        "headers": {},
+        "cookies": {},
+        "bodyAppend": {}
+      }
+    },
+    {
+      "name": "posttruststorepkcs12",
+      "description": "POST /etc/truststore",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "body__truststore.p12": {
+            "description": "",
+            "type": "string"
+          }
+        }
+      },
+      "annotations": {
+        "title": "posttruststorepkcs12",
+        "idempotentHint": false
+      },
+      "oapiHandlerInput": {
+        "method": "POST",
+        "path": "/etc/truststore",
+        "headers": {},
+        "cookies": {},
+        "bodyAppend": {},
+        "contentType": "multipart/form-data"
+      }
+    },
+    {
+      "name": "postconfigaempasswordreset",
+      "description": "POST /apps/system/config/com.shinesolutions.aem.passwordreset.Activator",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "query__pwdreset.authorizables": {
+            "description": "",
+            "type": "array"
+          },
+          "query__pwdreset.authorizables@TypeHint": {
+            "description": "",
+            "type": "string"
+          }
+        }
+      },
+      "annotations": {
+        "title": "postconfigaempasswordreset",
+        "idempotentHint": false
+      },
+      "oapiHandlerInput": {
+        "method": "POST",
+        "path": "/apps/system/config/com.shinesolutions.aem.passwordreset.Activator",
         "headers": {},
         "cookies": {},
         "bodyAppend": {}
@@ -2115,100 +1987,272 @@
       }
     },
     {
-      "name": "postconfigapachefelixjettybasedhttpservice",
-      "description": "POST /apps/system/config/org.apache.felix.http",
+      "name": "getaemproductinfo",
+      "description": "GET /system/console/status-productinfo.json",
+      "inputSchema": {
+        "type": "object"
+      },
+      "annotations": {
+        "title": "getaemproductinfo",
+        "readOnlyHint": true,
+        "idempotentHint": true
+      },
+      "oapiHandlerInput": {
+        "method": "GET",
+        "path": "/system/console/status-productinfo.json",
+        "headers": {},
+        "cookies": {},
+        "bodyAppend": {}
+      }
+    },
+    {
+      "name": "postauthorizables",
+      "description": "POST /libs/granite/security/post/authorizables",
       "inputSchema": {
         "type": "object",
         "properties": {
-          "query__org.apache.felix.https.clientcertificate": {
+          "query__authorizableId": {
             "description": "",
             "type": "string"
           },
-          "query__org.apache.felix.https.clientcertificate@TypeHint": {
+          "query__createGroup": {
             "description": "",
             "type": "string"
           },
-          "query__org.apache.felix.https.enable": {
+          "query__createUser": {
+            "description": "",
+            "type": "string"
+          },
+          "query__intermediatePath": {
+            "description": "",
+            "type": "string"
+          },
+          "query__profile/givenName": {
+            "description": "",
+            "type": "string"
+          },
+          "query__rep:password": {
+            "description": "",
+            "type": "string"
+          }
+        },
+        "required": [
+          "query__authorizableId",
+          "query__intermediatePath"
+        ]
+      },
+      "annotations": {
+        "title": "postauthorizables",
+        "idempotentHint": false
+      },
+      "oapiHandlerInput": {
+        "method": "POST",
+        "path": "/libs/granite/security/post/authorizables",
+        "headers": {},
+        "cookies": {},
+        "bodyAppend": {}
+      }
+    },
+    {
+      "name": "getaemhealthcheck",
+      "description": "GET /system/health",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "query__combineTagsOr": {
             "description": "",
             "type": "boolean"
           },
-          "query__org.apache.felix.https.enable@TypeHint": {
-            "description": "",
-            "type": "string"
-          },
-          "query__org.apache.felix.https.keystore": {
-            "description": "",
-            "type": "string"
-          },
-          "query__org.apache.felix.https.keystore.key": {
-            "description": "",
-            "type": "string"
-          },
-          "query__org.apache.felix.https.keystore.key.password": {
-            "description": "",
-            "type": "string"
-          },
-          "query__org.apache.felix.https.keystore.key.password@TypeHint": {
-            "description": "",
-            "type": "string"
-          },
-          "query__org.apache.felix.https.keystore.key@TypeHint": {
-            "description": "",
-            "type": "string"
-          },
-          "query__org.apache.felix.https.keystore.password": {
-            "description": "",
-            "type": "string"
-          },
-          "query__org.apache.felix.https.keystore.password@TypeHint": {
-            "description": "",
-            "type": "string"
-          },
-          "query__org.apache.felix.https.keystore@TypeHint": {
-            "description": "",
-            "type": "string"
-          },
-          "query__org.apache.felix.https.nio": {
-            "description": "",
-            "type": "boolean"
-          },
-          "query__org.apache.felix.https.nio@TypeHint": {
-            "description": "",
-            "type": "string"
-          },
-          "query__org.apache.felix.https.truststore": {
-            "description": "",
-            "type": "string"
-          },
-          "query__org.apache.felix.https.truststore.password": {
-            "description": "",
-            "type": "string"
-          },
-          "query__org.apache.felix.https.truststore.password@TypeHint": {
-            "description": "",
-            "type": "string"
-          },
-          "query__org.apache.felix.https.truststore@TypeHint": {
-            "description": "",
-            "type": "string"
-          },
-          "query__org.osgi.service.http.port.secure": {
-            "description": "",
-            "type": "string"
-          },
-          "query__org.osgi.service.http.port.secure@TypeHint": {
+          "query__tags": {
             "description": "",
             "type": "string"
           }
         }
       },
       "annotations": {
-        "title": "postconfigapachefelixjettybasedhttpservice",
+        "title": "getaemhealthcheck",
+        "readOnlyHint": true,
+        "idempotentHint": true
+      },
+      "oapiHandlerInput": {
+        "method": "GET",
+        "path": "/system/health",
+        "headers": {},
+        "cookies": {},
+        "bodyAppend": {}
+      }
+    },
+    {
+      "name": "postsamlconfiguration",
+      "description": "POST /system/console/configMgr/com.adobe.granite.auth.saml.SamlAuthenticationHandler",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "query__$location": {
+            "description": "",
+            "type": "string"
+          },
+          "query__action": {
+            "description": "",
+            "type": "string"
+          },
+          "query__addGroupMemberships": {
+            "description": "",
+            "type": "boolean"
+          },
+          "query__apply": {
+            "description": "",
+            "type": "boolean"
+          },
+          "query__assertionConsumerServiceURL": {
+            "description": "",
+            "type": "string"
+          },
+          "query__clockTolerance": {
+            "description": "",
+            "type": "integer"
+          },
+          "query__createUser": {
+            "description": "",
+            "type": "boolean"
+          },
+          "query__defaultGroups": {
+            "description": "",
+            "type": "array"
+          },
+          "query__defaultRedirectUrl": {
+            "description": "",
+            "type": "string"
+          },
+          "query__delete": {
+            "description": "",
+            "type": "boolean"
+          },
+          "query__digestMethod": {
+            "description": "",
+            "type": "string"
+          },
+          "query__groupMembershipAttribute": {
+            "description": "",
+            "type": "string"
+          },
+          "query__handleLogout": {
+            "description": "",
+            "type": "boolean"
+          },
+          "query__idpCertAlias": {
+            "description": "",
+            "type": "string"
+          },
+          "query__idpHttpRedirect": {
+            "description": "",
+            "type": "boolean"
+          },
+          "query__idpUrl": {
+            "description": "",
+            "type": "string"
+          },
+          "query__keyStorePassword": {
+            "description": "",
+            "type": "string"
+          },
+          "query__logoutUrl": {
+            "description": "",
+            "type": "string"
+          },
+          "query__nameIdFormat": {
+            "description": "",
+            "type": "string"
+          },
+          "query__path": {
+            "description": "",
+            "type": "array"
+          },
+          "query__post": {
+            "description": "",
+            "type": "boolean"
+          },
+          "query__propertylist": {
+            "description": "",
+            "type": "array"
+          },
+          "query__service.ranking": {
+            "description": "",
+            "type": "integer"
+          },
+          "query__serviceProviderEntityId": {
+            "description": "",
+            "type": "string"
+          },
+          "query__signatureMethod": {
+            "description": "",
+            "type": "string"
+          },
+          "query__spPrivateKeyAlias": {
+            "description": "",
+            "type": "string"
+          },
+          "query__synchronizeAttributes": {
+            "description": "",
+            "type": "array"
+          },
+          "query__useEncryption": {
+            "description": "",
+            "type": "boolean"
+          },
+          "query__userIDAttribute": {
+            "description": "",
+            "type": "string"
+          },
+          "query__userIntermediatePath": {
+            "description": "",
+            "type": "string"
+          }
+        }
+      },
+      "annotations": {
+        "title": "postsamlconfiguration",
         "idempotentHint": false
       },
       "oapiHandlerInput": {
         "method": "POST",
-        "path": "/apps/system/config/org.apache.felix.http",
+        "path": "/system/console/configMgr/com.adobe.granite.auth.saml.SamlAuthenticationHandler",
+        "headers": {},
+        "cookies": {},
+        "bodyAppend": {}
+      }
+    },
+    {
+      "name": "postnoderw",
+      "description": "POST /{path}/{name}.rw.html",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "path__name": {
+            "description": "",
+            "type": "string"
+          },
+          "path__path": {
+            "description": "",
+            "type": "string"
+          },
+          "query__addMembers": {
+            "description": "",
+            "type": "string"
+          }
+        },
+        "required": [
+          "path__path",
+          "path__name"
+        ]
+      },
+      "annotations": {
+        "title": "postnoderw",
+        "idempotentHint": false
+      },
+      "oapiHandlerInput": {
+        "method": "POST",
+        "path": "/{path}/{name}.rw.html",
         "headers": {},
         "cookies": {},
         "bodyAppend": {}
@@ -2221,7 +2265,7 @@
     "port": "8080",
     "devMode": false,
     "sourceType": "openapi",
-    "file": "adobe_aem_makemcp.json",
+    "file": "adobe_aem__makemcp",
     "specs": "testbed/openapi/sample_specifications/adobe_aem_3_7_1.json",
     "baseURL": "http://adobe.local",
     "timeout": 30,
