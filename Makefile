@@ -88,5 +88,12 @@ build-all: ## Build for all platforms
 # Development workflow
 dev: clean fmt vet test build ## Run full development workflow
 
-# Release preparation
+# Release commands
+tag-release: ## Tag a new release (usage: make tag-release [major|minor|patch], defaults to patch)
+	@./scripts/tag-release.sh $(filter-out $@,$(MAKECMDGOALS))
+
+# This allows arguments to be passed to the tag-release target
+%:
+	@:
+
 release: clean test build-all ## Prepare release builds
