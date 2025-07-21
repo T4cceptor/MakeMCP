@@ -100,7 +100,7 @@ func TestOpenAPISource_Parse(t *testing.T) {
 	// Test tools generation - FastAPI spec has these operations
 	expectedTools := []string{
 		"read_root__get",
-		"list_users_users_get", 
+		"list_users_users_get",
 		"create_user_users_post",
 		"get_user_by_id_users__user_id__get",
 		"update_user_users__user_id__patch",
