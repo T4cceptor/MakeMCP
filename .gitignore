@@ -1,10 +1,9 @@
-# tmp folder
+# tmp folders
 tmp/
+testbed/*/results
 
 # test coverage files
 coverage*
-
-/**/test.db
 
 # makemcp & config files (root level only)
 /*.makemcp.json

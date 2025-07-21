@@ -27,7 +27,10 @@ func TestOpenAPISource_LoadSpec(t *testing.T) {
 	// Test only the valid case since loadOpenAPISpec calls log.Fatalf on error
 	// which would exit the test process
 	t.Run("Valid OpenAPI spec file", func(t *testing.T) {
-		doc, err := source.loadOpenAPISpec("../../../testdata/sample_openapi.json", false)
+		doc, err := source.loadOpenAPISpec(
+			"../../../testbed/openapi/sample_specifications/fastapi.json",
+			false,
+		)
 		if err != nil {
 			t.Fatalf("Expected no error but got: %v", err)
 		}
@@ -49,11 +52,11 @@ func TestOpenAPISource_LoadSpec(t *testing.T) {
 		}
 
 		// Check that it loaded our test data correctly
-		if doc.Info.Title != "Sample User API" {
-			t.Errorf("Expected title 'Sample User API', got %s", doc.Info.Title)
+		if doc.Info.Title != "FastAPI" {
+			t.Errorf("Expected title 'FastAPI', got %s", doc.Info.Title)
 		}
-		if doc.Info.Version != "1.0.0" {
-			t.Errorf("Expected version '1.0.0', got %s", doc.Info.Version)
+		if doc.Info.Version != "0.1.0" {
+			t.Errorf("Expected version '0.1.0', got %s", doc.Info.Version)
 		}
 	})
 }
@@ -66,7 +69,7 @@ func TestOpenAPISource_Parse(t *testing.T) {
 	input := &core.CLIParamsInput{
 		SharedParams: sharedParams,
 		CliFlags: map[string]any{
-			"specs":    "../../../testbed/openapi/expected_result/simplewithbody_makemcp.json",
+			"specs":    "../../../testbed/openapi/sample_specifications/fastapi.json",
 			"base-url": "http://localhost:8080",
 		},
 		CliArgs: []string{},
@@ -94,14 +97,15 @@ func TestOpenAPISource_Parse(t *testing.T) {
 		t.Errorf("Expected source type 'openapi', got %s", app.SourceParams.GetSourceType())
 	}
 
-	// Test tools generation
+	// Test tools generation - FastAPI spec has these operations
 	expectedTools := []string{
-		"listusers",
-		"createuser",
-		"getuserbyid",
-		"updateuser",
-		"deleteuser",
-		"get__users_userid_preferences", // This one doesn't have operationId
+		"read_root__get",
+		"list_users_users_get", 
+		"create_user_users_post",
+		"get_user_by_id_users__user_id__get",
+		"update_user_users__user_id__patch",
+		"delete_user_users__user_id__delete",
+		"get_user_by_email_users_by_email__get",
 	}
 
 	if len(app.Tools) != len(expectedTools) {

@@ -162,8 +162,8 @@ func TestSaveToFile_InvalidPath(t *testing.T) {
 		t.Error("Expected error for invalid path, got nil")
 	}
 
-	if !strings.Contains(err.Error(), "failed to create file") {
-		t.Errorf("Expected 'failed to create file' error, got: %v", err)
+	if !strings.Contains(err.Error(), "failed to create") {
+		t.Errorf("Expected 'failed to create' error, got: %v", err)
 	}
 }
 

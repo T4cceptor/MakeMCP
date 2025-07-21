@@ -458,7 +458,7 @@ func extractRequestBodySchemaDoc(operation *openapi3.Operation) string {
 
 	// Check for non-JSON content types that need schema documentation
 	nonJSONContentTypes := []string{"text/xml", "application/xml", "text/plain"}
-	
+
 	for _, contentType := range nonJSONContentTypes {
 		if media, exists := operation.RequestBody.Value.Content[contentType]; exists {
 			if media.Schema != nil && media.Schema.Value != nil {
@@ -484,68 +484,68 @@ func extractRequestBodyProperties(operation *openapi3.Operation) (map[string]Too
 
 	for _, contentType := range contentTypes {
 		if media, exists := operation.RequestBody.Value.Content[contentType]; exists {
-			if contentType == "application/json" || contentType == "*/*" {
-				// Handle JSON/generic - extract individual properties
-				if media.Schema != nil && media.Schema.Value != nil {
-					schema := media.Schema.Value
-					for propName, propSchemaRef := range schema.Properties {
-						propSchema := propSchemaRef.Value
-						if propSchema == nil {
-							continue
-						}
-						properties[propName] = ToolInputProperty{
-							Type:        getSchemaTypeString(propSchema),
-							Description: propSchema.Description,
-							Location:    "body",
-						}
-					}
-					if schema.Required != nil {
-						required = append(required, schema.Required...)
-					}
-				}
-			} else {
-				// Handle XML and other structured types - single body parameter
-				properties["body"] = ToolInputProperty{
-					Type:        "string",
-					Description: fmt.Sprintf("%s request body", contentType),
-					Location:    "body",
-				}
-				required = append(required, "body")
-			}
-			return properties, required
+			return extractPropertiesFromMedia(media, contentType)
 		}
 	}
 
 	// If no recognized content type found, try the first available one
 	for contentType, media := range operation.RequestBody.Value.Content {
-		if media.Schema != nil && media.Schema.Value != nil && len(media.Schema.Value.Properties) > 0 {
-			// Has schema properties - treat like JSON for unknown content types
-			schema := media.Schema.Value
-			for propName, propSchemaRef := range schema.Properties {
-				propSchema := propSchemaRef.Value
-				if propSchema == nil {
-					continue
-				}
-				properties[propName] = ToolInputProperty{
-					Type:        getSchemaTypeString(propSchema),
-					Description: propSchema.Description,
-					Location:    "body",
-				}
+		return extractPropertiesFromMedia(media, contentType)
+	}
+
+	return properties, required
+}
+
+// extractPropertiesFromMedia extracts properties from a media type
+func extractPropertiesFromMedia(media *openapi3.MediaType, contentType string) (map[string]ToolInputProperty, []string) {
+	if contentType == "application/json" || contentType == "*/*" {
+		return extractJSONProperties(media)
+	}
+	return extractNonJSONProperties(media, contentType)
+}
+
+// extractJSONProperties handles JSON/generic content types
+func extractJSONProperties(media *openapi3.MediaType) (map[string]ToolInputProperty, []string) {
+	properties := make(map[string]ToolInputProperty)
+	var required []string
+
+	if media.Schema != nil && media.Schema.Value != nil {
+		schema := media.Schema.Value
+		for propName, propSchemaRef := range schema.Properties {
+			propSchema := propSchemaRef.Value
+			if propSchema == nil {
+				continue
 			}
-			if schema.Required != nil {
-				required = append(required, schema.Required...)
-			}
-		} else {
-			// No schema or properties - single body parameter
-			properties["body"] = ToolInputProperty{
-				Type:        "string",
-				Description: fmt.Sprintf("%s request body", contentType),
+			properties[propName] = ToolInputProperty{
+				Type:        getSchemaTypeString(propSchema),
+				Description: propSchema.Description,
 				Location:    "body",
 			}
-			required = append(required, "body")
 		}
-		break // Use the first one found
+		if schema.Required != nil {
+			required = append(required, schema.Required...)
+		}
 	}
+	return properties, required
+}
+
+// extractNonJSONProperties handles XML and other structured types
+func extractNonJSONProperties(media *openapi3.MediaType, contentType string) (map[string]ToolInputProperty, []string) {
+	properties := make(map[string]ToolInputProperty)
+	var required []string
+
+	if media.Schema != nil && media.Schema.Value != nil && len(media.Schema.Value.Properties) > 0 {
+		// Has schema properties - treat like JSON for unknown content types
+		return extractJSONProperties(media)
+	}
+
+	// No schema or properties - single body parameter
+	properties["body"] = ToolInputProperty{
+		Type:        "string",
+		Description: fmt.Sprintf("%s request body", contentType),
+		Location:    "body",
+	}
+	required = append(required, "body")
 
 	return properties, required
 }
@@ -569,7 +569,7 @@ func (s *OpenAPISource) AttachToolHandlers(app *core.MakeMCPApp) error {
 }
 
 // buildRequestURL constructs the full URL with path and query parameters..
-func buildRequestURL(baseURL, path string, params ToolParams, method string) string {
+func buildRequestURL(baseURL, path string, params ToolParams) string {
 	pathWithParams := substitutePathParams(path, params.Path)
 	fullURL := baseURL + pathWithParams
 
@@ -690,7 +690,7 @@ func GetHandlerFunction(makeMcpTool *OpenAPIMcpTool, apiClient *APIClient) func(
 		method := makeMcpTool.OpenAPIHandlerInput.Method
 
 		// Build URL and body using helper functions
-		fullURL := buildRequestURL(apiClient.BaseURL, makeMcpTool.OpenAPIHandlerInput.Path, params, method)
+		fullURL := buildRequestURL(apiClient.BaseURL, makeMcpTool.OpenAPIHandlerInput.Path, params)
 		bodyReader, err := buildRequestBody(params, method, makeMcpTool.OpenAPIHandlerInput.ContentType)
 		if err != nil {
 			return nil, err

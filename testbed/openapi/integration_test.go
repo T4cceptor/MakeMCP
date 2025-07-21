@@ -22,8 +22,6 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
-	//"github.com/T4cceptor/MakeMCP/pkg/core"
-	//"github.com/T4cceptor/MakeMCP/pkg/sources/openapi"
 )
 
 // Test data structure for OpenAPI integration tests
@@ -40,44 +38,44 @@ func getTestCases() []testCase {
 	return []testCase{
 		{
 			name:               "SimpleWithBody",
-			specFile:           "sample_specifications/simple_with_body.json",
+			specFile:           "sample_specifications/simplewithbody.json",
 			baseURL:            "https://api.example.com/v1",
-			expectedResultFile: "expected_result/simple_with_body_makemcp.json",
+			expectedResultFile: "expected_results/simplewithbody_makemcp.json",
 			expectedSource:     "openapi",
 		},
 		{
 			name:               "FastAPI",
 			specFile:           "sample_specifications/fastapi.json",
 			baseURL:            "http://localhost:8081",
-			expectedResultFile: "expected_result/fastapi_makemcp.json",
+			expectedResultFile: "expected_results/fastapi_makemcp.json",
 			expectedSource:     "openapi",
 		},
 		{
 			name:               "GoFuego",
 			specFile:           "sample_specifications/gofuego.json",
 			baseURL:            "http://localhost:8120",
-			expectedResultFile: "expected_result/gofuego_makemcp.json",
+			expectedResultFile: "expected_results/gofuego_makemcp.json",
 			expectedSource:     "openapi",
 		},
 		{
 			name:               "Salesforce",
 			specFile:           "sample_specifications/salesforce_1.json",
 			baseURL:            "https://api.salesforce.com/einstein/platform/v1",
-			expectedResultFile: "expected_result/salesforce_makemcp.json",
+			expectedResultFile: "expected_results/salesforce_makemcp.json",
 			expectedSource:     "openapi",
 		},
 		{
 			name:               "AdobeAEM",
 			specFile:           "sample_specifications/adobe_aem_3_7_1.json",
 			baseURL:            "http://adobe.local",
-			expectedResultFile: "expected_result/adobe_aem_makemcp.json",
+			expectedResultFile: "expected_results/adobe_aem_makemcp.json",
 			expectedSource:     "openapi",
 		},
 		{
 			name:               "AWSS3",
 			specFile:           "sample_specifications/aws_s3.json",
 			baseURL:            "https://s3.amazonaws.com",
-			expectedResultFile: "expected_result/aws_s3_makemcp.json",
+			expectedResultFile: "expected_results/aws_s3_makemcp.json",
 			expectedSource:     "openapi",
 		},
 	}
@@ -202,7 +200,7 @@ func TestOpenAPIIntegration(t *testing.T) {
 					t.Errorf("%s mismatch: expected %v, got %v", field, expected[field], actual[field])
 				}
 			}
-			
+
 			compareField("name")
 			compareField("version")
 			compareField("sourceType")
