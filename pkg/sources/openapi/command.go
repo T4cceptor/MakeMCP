@@ -18,14 +18,21 @@ import (
 	"github.com/urfave/cli/v3"
 )
 
-var baseUrlCommand cli.StringFlag = cli.StringFlag{
+var specsFlag cli.StringFlag = cli.StringFlag{
+	Name:    "specs",
+	Aliases: []string{"s"},
+	Value:   "",
+	Usage:   "Where to find the OpenAPI specification - can be either a properly formed URL, including protocol, or a file path to a JSON file.",
+}
+
+var baseUrlFlag cli.StringFlag = cli.StringFlag{
 	Name:    "base-url",
 	Aliases: []string{"b"},
 	Value:   "",
 	Usage:   "Base URL of the OpenAPI specified API. This will be called when invoking the tools.",
 }
 
-var timeoutCommand cli.IntFlag = cli.IntFlag{
+var timeoutFlag cli.IntFlag = cli.IntFlag{
 	Name:    "timeout",
 	Aliases: []string{"to"},
 	Value:   30,
@@ -38,14 +45,9 @@ func (s *OpenAPISource) GetCommand() *cli.Command {
 		Name:  "openapi",
 		Usage: "Use OpenAPI specifications to launch an MCP server locally.",
 		Flags: []cli.Flag{
-			&cli.StringFlag{
-				Name:    "specs",
-				Aliases: []string{"s"},
-				Value:   "",
-				Usage:   "Where to find the OpenAPI specification - can be either a properly formed URL, including protocol, or a file path to a JSON file.",
-			},
-			&baseUrlCommand,
-			&timeoutCommand,
+			&specsFlag,
+			&baseUrlFlag,
+			&timeoutFlag,
 		},
 	}
 }

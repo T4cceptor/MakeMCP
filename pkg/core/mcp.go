@@ -87,5 +87,4 @@ type MakeMCPTool interface {
 		// TODO: refactor to get rid of mcp-go dependency
 	) (*mcp.CallToolResult, error)
 	ToMcpTool() McpTool
-	ToJSON() string
 }

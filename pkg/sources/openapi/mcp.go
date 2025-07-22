@@ -22,17 +22,24 @@ import (
 	"io"
 	"log"
 	"net/http"
-	"net/url"
+	"slices"
 	"strings"
 
-	"github.com/getkin/kin-openapi/openapi3"
-	"github.com/mark3labs/mcp-go/mcp"
-
 	core "github.com/T4cceptor/MakeMCP/pkg/core"
+	"github.com/mark3labs/mcp-go/mcp"
 )
 
 // OpenAPISource implements the sources.Source interface for OpenAPI specifications
-type OpenAPISource struct{}
+type OpenAPISource struct {
+	adapter *LibopenAPIAdapter
+}
+
+// NewOpenAPISource creates a new OpenAPISource instance
+func NewOpenAPISource() *OpenAPISource {
+	return &OpenAPISource{
+		adapter: NewLibopenAPIAdapter(),
+	}
+}
 
 // Name returns the name of this source type
 func (s *OpenAPISource) Name() string {
@@ -42,6 +49,11 @@ func (s *OpenAPISource) Name() string {
 // ParseParams converts raw CLI input into typed OpenAPI parameters
 func (s *OpenAPISource) ParseParams(input *core.CLIParamsInput) (core.SourceParams, error) {
 	return ParseFromCLIInput(input)
+}
+
+// UnmarshalConfig reconstructs a MakeMCPApp from JSON data for the load command
+func (s *OpenAPISource) UnmarshalConfig(data []byte) (*core.MakeMCPApp, error) {
+	return core.UnmarshalConfigWithTypedParams[*OpenAPIMcpTool, *OpenAPIParams](data)
 }
 
 // Parse converts an OpenAPI specification into a MakeMCPApp configuration
@@ -60,494 +72,41 @@ func (s *OpenAPISource) Parse(params core.SourceParams) (*core.MakeMCPApp, error
 
 	app := core.NewMakeMCPApp("", "", openAPIParams)
 
+	// Initialize adapter if not present
+	if s.adapter == nil {
+		s.adapter = NewLibopenAPIAdapter()
+	}
+
 	// Load the OpenAPI specification
-	doc, err := s.loadOpenAPISpec(openAPIParams.Specs, openAPIParams.StrictValidate)
+	doc, err := s.adapter.LoadOpenAPISpec(openAPIParams.Specs, openAPIParams.StrictValidate)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load OpenAPI spec: %w", err)
 	}
 
 	// Create the app configuration
+	title, version := s.adapter.GetDocumentInfo(doc)
 	if app.Name == "" {
-		app.Name = doc.Info.Title
+		app.Name = title
 	}
 	if app.Version == "" {
-		app.Version = doc.Info.Version
+		app.Version = version
 	}
 
 	// Convert OpenAPI operations to MCP tools
-	var tools []core.MakeMCPTool
-	for path, pathItem := range doc.Paths.Map() {
-		for method, operation := range pathItem.Operations() {
-			tool := s.createToolFromOperation(method, path, operation)
-			tools = append(tools, &tool)
-		}
+	openAPITools, err := s.adapter.CreateToolsFromDocument(doc)
+	if err != nil {
+		return nil, fmt.Errorf("failed to process operations: %w", err)
 	}
-
-	app.Tools = tools
+	app.Tools = convertToMakeMCPTools(openAPITools)
 	return &app, nil
 }
 
-// loadOpenAPISpec loads an OpenAPI specification from a URL or local file path
-func (s *OpenAPISource) loadOpenAPISpec(openAPISpecLocation string, strictValidation bool) (*openapi3.T, error) {
-	log.Println("Loading OpenAPI spec from:", openAPISpecLocation)
-	loader := openapi3.NewLoader()
-	sourceType := s.detectSourceType(openAPISpecLocation)
-
-	var doc *openapi3.T
-	var err error
-
-	switch sourceType {
-	case "file":
-		doc, err = loader.LoadFromFile(openAPISpecLocation)
-		if err != nil {
-			return nil, fmt.Errorf("failed to load from file: %w", err)
-		}
-	case "url":
-		u, err := url.Parse(openAPISpecLocation)
-		if err != nil {
-			return nil, fmt.Errorf("invalid URL format: %w", err)
-		}
-		doc, err = loader.LoadFromURI(u)
-		if err != nil {
-			return nil, fmt.Errorf("failed to load from URL: %w", err)
-		}
-	default:
-		return nil, fmt.Errorf("unknown source type: %s", sourceType)
+func convertToMakeMCPTools(tools []OpenAPIMcpTool) []core.MakeMCPTool {
+	result := make([]core.MakeMCPTool, len(tools))
+	for i := range tools {
+		result[i] = &tools[i]
 	}
-
-	// Conditional validation based on strictValidation flag
-	if strictValidation {
-		log.Println("Performing strict OpenAPI validation...")
-		if err := doc.Validate(context.Background()); err != nil {
-			return nil, fmt.Errorf("invalid OpenAPI specification (strict mode): %w", err)
-		}
-	} else {
-		log.Println("Skipping strict validation (permissive mode)")
-	}
-
-	log.Printf("Loaded OpenAPI spec: %s v%s", doc.Info.Title, doc.Info.Version)
-	return doc, nil
-}
-
-// detectSourceType determines whether the spec location is a URL or file path
-func (s *OpenAPISource) detectSourceType(openAPISpecLocation string) string {
-	u, err := url.Parse(openAPISpecLocation)
-	if err == nil && u.Scheme != "" && (u.Scheme == "http" || u.Scheme == "https") {
-		return "url"
-	}
-	return "file"
-}
-
-// GetSampleTool returns a sample OpenAPI MCP tool for testing and validation.
-func (s *OpenAPISource) GetSampleTool() core.MakeMCPTool {
-	return &OpenAPIMcpTool{}
-}
-
-// UnmarshalConfig reconstructs a MakeMCPApp from JSON data for the load command
-func (s *OpenAPISource) UnmarshalConfig(data []byte) (*core.MakeMCPApp, error) {
-	return core.UnmarshalConfigWithTypedParams[*OpenAPIMcpTool, *OpenAPIParams](data)
-}
-
-// OpenAPIHandlerInput defines how a particular endpoint is to be called
-type OpenAPIHandlerInput struct {
-	Method      string            `json:"method"`
-	Path        string            `json:"path"`
-	Headers     map[string]string `json:"headers"`
-	Cookies     map[string]string `json:"cookies"`
-	BodyAppend  map[string]any    `json:"bodyAppend"`
-	ContentType string            `json:"contentType,omitempty"`
-}
-
-// NewOpenAPIHandlerInput creates a new OpenAPIHandlerInput
-func NewOpenAPIHandlerInput(method, path string) OpenAPIHandlerInput {
-	return OpenAPIHandlerInput{
-		Method:     method,
-		Path:       path,
-		Headers:    make(map[string]string),
-		Cookies:    make(map[string]string),
-		BodyAppend: make(map[string]any),
-	}
-}
-
-// OpenAPIMcpTool represents an MCP tool generated from an OpenAPI operation.
-type OpenAPIMcpTool struct {
-	core.McpTool
-	OpenAPIHandlerInput *OpenAPIHandlerInput `json:"oapiHandlerInput,omitempty"`
-	handler             func(
-		ctx context.Context,
-		request mcp.CallToolRequest,
-		// TODO: refactor to get rid of mcp-go dependency
-	) (*mcp.CallToolResult, error) `json:"-"`
-}
-
-// GetName returns the name of the OpenAPI MCP tool.
-func (o *OpenAPIMcpTool) GetName() string {
-	return o.McpTool.Name
-}
-
-// ToMcpTool returns the core MCP tool representation.
-func (o *OpenAPIMcpTool) ToMcpTool() core.McpTool {
-	return o.McpTool
-}
-
-// ToJSON returns a JSON representation of the OpenAPI MCP tool.
-func (o *OpenAPIMcpTool) ToJSON() string {
-	// TODO
-	return ""
-}
-
-// GetHandler returns the MCP tool handler function for processing requests.
-func (o *OpenAPIMcpTool) GetHandler() func(
-	ctx context.Context,
-	request mcp.CallToolRequest,
-	// TODO: refactor to get rid of mcp-go dependency
-) (*mcp.CallToolResult, error) {
-	return o.handler
-}
-
-// createToolFromOperation creates a MakeMCPTool from an OpenAPI operation
-func (s *OpenAPISource) createToolFromOperation(method, path string, operation *openapi3.Operation) OpenAPIMcpTool {
-	toolName := s.getToolName(method, path, operation)
-	toolInputSchema := s.getToolInputSchema(operation)
-	toolAnnotations := s.getToolAnnotations(method, path, operation)
-
-	// Create tool description
-	description := operation.Description
-	if description == "" {
-		description = operation.Summary
-	}
-	if description == "" {
-		description = fmt.Sprintf("%s %s", strings.ToUpper(method), path)
-	}
-
-	// Add schema documentation for non-JSON request bodies
-	bodySchemaDoc := extractRequestBodySchemaDoc(operation)
-	if bodySchemaDoc != "" {
-		description = description + "\n\n" + bodySchemaDoc
-	}
-
-	// Create the tool
-	tool := OpenAPIMcpTool{
-		McpTool: core.McpTool{
-			Name:        toolName,
-			Description: description,
-			InputSchema: toolInputSchema,
-			Annotations: toolAnnotations,
-		},
-		OpenAPIHandlerInput: &OpenAPIHandlerInput{
-			Method:      method,
-			Path:        path,
-			Headers:     make(map[string]string),
-			Cookies:     make(map[string]string),
-			BodyAppend:  make(map[string]interface{}),
-			ContentType: determineContentType(operation),
-		},
-	}
-
-	return tool
-}
-
-// getToolName generates a tool name from operation ID or method and path.
-func (s *OpenAPISource) getToolName(method string, path string, operation *openapi3.Operation) string {
-	toolName := operation.OperationID
-	if toolName == "" {
-		toolName = fmt.Sprintf("%s_%s", method, path)
-	}
-
-	// Clean up the tool name by removing invalid characters
-	toolName = strings.ReplaceAll(toolName, "{", "")
-	toolName = strings.ReplaceAll(toolName, "}", "")
-	toolName = strings.ReplaceAll(toolName, "/", "_")
-	toolName = strings.ReplaceAll(toolName, "-", "_")
-	toolName = strings.ToLower(toolName)
-
-	return toolName
-}
-
-// getToolInputSchema creates the input schema for a tool.
-func (s *OpenAPISource) getToolInputSchema(
-	operation *openapi3.Operation,
-) core.McpToolInputSchema {
-	// TODO: refactor to get rid of mcp dependency
-	genericProps := make(map[string]interface{})
-	var required []string
-
-	// Extract path, query, header, and cookie parameters
-	for _, in := range []ParameterLocation{ParameterLocationPath, ParameterLocationQuery, ParameterLocationHeader, ParameterLocationCookie} {
-		props, reqs := extractParametersByIn(operation, in)
-		for paramName, prop := range props {
-			prefixedName := fmt.Sprintf("%s__%s", in, paramName)
-			genericProps[prefixedName] = map[string]interface{}{
-				"type":        prop.Type,
-				"description": prop.Description,
-			}
-			for _, reqName := range reqs {
-				if reqName == paramName {
-					required = append(required, prefixedName)
-					break
-				}
-			}
-		}
-	}
-
-	// Extract request body properties
-	bodyProps, bodyReqs := extractRequestBodyProperties(operation)
-	for paramName, prop := range bodyProps {
-		prefixedName := fmt.Sprintf("body__%s", paramName)
-		genericProps[prefixedName] = map[string]interface{}{
-			"type":        prop.Type,
-			"description": prop.Description,
-		}
-		for _, reqName := range bodyReqs {
-			if reqName == paramName {
-				required = append(required, prefixedName)
-				break
-			}
-		}
-	}
-
-	return core.McpToolInputSchema{ // TODO: refactor to get rid of mcp dependency
-		Type:       "object",
-		Properties: genericProps,
-		Required:   required,
-	}
-}
-
-// getToolAnnotations returns tool annotations based on HTTP method and operation.
-func (s *OpenAPISource) getToolAnnotations(
-	method string, path string, operation *openapi3.Operation,
-) core.McpToolAnnotation {
-	// TODO: refactor to get rid of mcp dependency
-	annotation := core.McpToolAnnotation{
-		Title:           s.getToolName(method, path, operation),
-		ReadOnlyHint:    nil,
-		DestructiveHint: nil,
-		IdempotentHint:  nil,
-		OpenWorldHint:   nil,
-	}
-
-	methodUpper := strings.ToUpper(method)
-
-	// ReadOnlyHint: GET, HEAD, OPTIONS are considered read-only and idempotent
-	if methodUpper == "GET" || methodUpper == "HEAD" || methodUpper == "OPTIONS" {
-		annotation.ReadOnlyHint = boolPtr(true)
-		annotation.IdempotentHint = boolPtr(true)
-	}
-
-	// DestructiveHint: DELETE is considered destructive
-	if methodUpper == "DELETE" {
-		annotation.DestructiveHint = boolPtr(true)
-	}
-
-	// IdempotentHint: PUT is idempotent, POST is not
-	if methodUpper == "PUT" {
-		annotation.IdempotentHint = boolPtr(true)
-	} else if methodUpper == "POST" {
-		annotation.IdempotentHint = boolPtr(false)
-	}
-
-	return annotation
-}
-
-// =============================================================================
-// TOOL INPUT SCHEMA GENERATION
-// =============================================================================
-
-// getSchemaTypeString returns the first OpenAPI type if present, otherwise defaults to "string".
-func getSchemaTypeString(schema *openapi3.Schema) string {
-	if schema != nil && schema.Type != nil && len(*schema.Type) > 0 {
-		return (*schema.Type)[0]
-	}
-	return "string"
-}
-
-// extractParametersByIn extracts parameters of a given 'in' type (e.g., "path", "query", "header", "cookie")
-// from an OpenAPI operation and returns properties and required fields.
-func extractParametersByIn(operation *openapi3.Operation, in ParameterLocation) (map[string]ToolInputProperty, []string) {
-	properties := make(map[string]ToolInputProperty)
-	var required []string
-	for _, paramRef := range operation.Parameters {
-		if paramRef.Value == nil {
-			continue
-		}
-		param := paramRef.Value
-		if param.In == string(in) {
-			typeName := getSchemaTypeString(param.Schema.Value)
-			properties[param.Name] = ToolInputProperty{
-				Type:        typeName,
-				Description: param.Description,
-				Location:    in, // Add the location field to record OpenAPI "in" value
-			}
-			if param.Required {
-				required = append(required, param.Name)
-			}
-		}
-	}
-	return properties, required
-}
-
-// generateSchemaDocumentation creates human-readable schema documentation for XML/other content types.
-func generateSchemaDocumentation(schema *openapi3.Schema, contentType string) string {
-	if schema == nil || len(schema.Properties) == 0 {
-		return fmt.Sprintf("Provide %s content as a string.", contentType)
-	}
-
-	var doc strings.Builder
-	doc.WriteString(fmt.Sprintf("Expected %s structure:\n", contentType))
-
-	for propName, propSchemaRef := range schema.Properties {
-		propSchema := propSchemaRef.Value
-		if propSchema == nil {
-			continue
-		}
-
-		required := ""
-		if contains(schema.Required, propName) {
-			required = " (required)"
-		}
-
-		doc.WriteString(fmt.Sprintf("- %s: %s%s", propName, getSchemaTypeString(propSchema), required))
-		if propSchema.Description != "" {
-			doc.WriteString(fmt.Sprintf(" - %s", propSchema.Description))
-		}
-		doc.WriteString("\n")
-	}
-
-	doc.WriteString(fmt.Sprintf("\nProvide the complete %s as a string in the 'body' parameter.", contentType))
-	return doc.String()
-}
-
-// contains checks if a string slice contains a specific string.
-func contains(slice []string, item string) bool {
-	for _, s := range slice {
-		if s == item {
-			return true
-		}
-	}
-	return false
-}
-
-// determineContentType returns the preferred content type for an operation's request body.
-func determineContentType(operation *openapi3.Operation) string {
-	if operation.RequestBody == nil || operation.RequestBody.Value == nil {
-		return ""
-	}
-
-	// Priority order for content types
-	contentTypes := []string{"application/json", "*/*", "text/xml", "application/xml", "text/plain"}
-
-	for _, contentType := range contentTypes {
-		if _, exists := operation.RequestBody.Value.Content[contentType]; exists {
-			return contentType
-		}
-	}
-
-	// Return first available content type if no priority match
-	for contentType := range operation.RequestBody.Value.Content {
-		return contentType
-	}
-
-	return ""
-}
-
-// extractRequestBodySchemaDoc extracts schema documentation for non-JSON content types.
-func extractRequestBodySchemaDoc(operation *openapi3.Operation) string {
-	if operation.RequestBody == nil || operation.RequestBody.Value == nil {
-		return ""
-	}
-
-	// Check for non-JSON content types that need schema documentation
-	nonJSONContentTypes := []string{"text/xml", "application/xml", "text/plain"}
-
-	for _, contentType := range nonJSONContentTypes {
-		if media, exists := operation.RequestBody.Value.Content[contentType]; exists {
-			if media.Schema != nil && media.Schema.Value != nil {
-				return generateSchemaDocumentation(media.Schema.Value, contentType)
-			}
-		}
-	}
-
-	return ""
-}
-
-// extractRequestBodyProperties extracts properties and required fields from the request body schema (if present).
-func extractRequestBodyProperties(operation *openapi3.Operation) (map[string]ToolInputProperty, []string) {
-	properties := make(map[string]ToolInputProperty)
-	var required []string
-
-	if operation.RequestBody == nil || operation.RequestBody.Value == nil {
-		return properties, required
-	}
-
-	// Check for supported content types in priority order
-	contentTypes := []string{"application/json", "*/*", "text/xml", "application/xml"}
-
-	for _, contentType := range contentTypes {
-		if media, exists := operation.RequestBody.Value.Content[contentType]; exists {
-			return extractPropertiesFromMedia(media, contentType)
-		}
-	}
-
-	// If no recognized content type found, try the first available one
-	for contentType, media := range operation.RequestBody.Value.Content {
-		return extractPropertiesFromMedia(media, contentType)
-	}
-
-	return properties, required
-}
-
-// extractPropertiesFromMedia extracts properties from a media type
-func extractPropertiesFromMedia(media *openapi3.MediaType, contentType string) (map[string]ToolInputProperty, []string) {
-	if contentType == "application/json" || contentType == "*/*" {
-		return extractJSONProperties(media)
-	}
-	return extractNonJSONProperties(media, contentType)
-}
-
-// extractJSONProperties handles JSON/generic content types
-func extractJSONProperties(media *openapi3.MediaType) (map[string]ToolInputProperty, []string) {
-	properties := make(map[string]ToolInputProperty)
-	var required []string
-
-	if media.Schema != nil && media.Schema.Value != nil {
-		schema := media.Schema.Value
-		for propName, propSchemaRef := range schema.Properties {
-			propSchema := propSchemaRef.Value
-			if propSchema == nil {
-				continue
-			}
-			properties[propName] = ToolInputProperty{
-				Type:        getSchemaTypeString(propSchema),
-				Description: propSchema.Description,
-				Location:    "body",
-			}
-		}
-		if schema.Required != nil {
-			required = append(required, schema.Required...)
-		}
-	}
-	return properties, required
-}
-
-// extractNonJSONProperties handles XML and other structured types
-func extractNonJSONProperties(media *openapi3.MediaType, contentType string) (map[string]ToolInputProperty, []string) {
-	properties := make(map[string]ToolInputProperty)
-	var required []string
-
-	if media.Schema != nil && media.Schema.Value != nil && len(media.Schema.Value.Properties) > 0 {
-		// Has schema properties - treat like JSON for unknown content types
-		return extractJSONProperties(media)
-	}
-
-	// No schema or properties - single body parameter
-	properties["body"] = ToolInputProperty{
-		Type:        "string",
-		Description: fmt.Sprintf("%s request body", contentType),
-		Location:    "body",
-	}
-	required = append(required, "body")
-
-	return properties, required
+	return result
 }
 
 // AttachToolHandlers adds tool handler functions to app.
@@ -568,25 +127,27 @@ func (s *OpenAPISource) AttachToolHandlers(app *core.MakeMCPApp) error {
 	return nil
 }
 
-// buildRequestURL constructs the full URL with path and query parameters..
+// buildRequestURL constructs the full URL with path and query parameters.
 func buildRequestURL(baseURL, path string, params ToolParams) string {
-	pathWithParams := substitutePathParams(path, params.Path)
-	fullURL := baseURL + pathWithParams
+	var url strings.Builder
+	url.WriteString(baseURL)
+	url.WriteString(substitutePathParams(path, params.Path))
 
 	// Add query parameters for all HTTP methods
 	if len(params.Query) > 0 {
 		encodedQuery := encodeQueryParams(params.Query)
 		if encodedQuery != "" {
-			fullURL = fullURL + "?" + encodedQuery
+			url.WriteString("?")
+			url.WriteString(encodedQuery)
 		}
 	}
-
-	return fullURL
+	return url.String()
 }
 
 // buildRequestBody prepares the request body for non-GET/DELETE methods based on content type.
 func buildRequestBody(params ToolParams, method, contentType string) (io.Reader, error) {
-	if len(params.Body) > 0 && !(method == http.MethodGet || method == http.MethodDelete) {
+	readOnlyMethods := []string{http.MethodGet, http.MethodDelete}
+	if len(params.Body) > 0 && !slices.Contains(readOnlyMethods, method) {
 		switch contentType {
 		case "text/xml", "application/xml":
 			// For XML, expect a single "body" parameter with XML string
@@ -633,11 +194,16 @@ func setRequestHeaders(req *http.Request, params ToolParams, hasBody bool, conte
 
 	// Set cookies
 	if len(params.Cookie) > 0 {
-		var cookieStrings []string
+		var cookies strings.Builder
+		first := true
 		for k, v := range params.Cookie {
-			cookieStrings = append(cookieStrings, fmt.Sprintf("%s=%v", k, v))
+			if !first {
+				cookies.WriteString("; ")
+			}
+			cookies.WriteString(fmt.Sprintf("%s=%v", k, v))
+			first = false
 		}
-		req.Header.Set("Cookie", strings.Join(cookieStrings, "; "))
+		req.Header.Set("Cookie", cookies.String())
 	}
 }
 

@@ -133,9 +133,9 @@ func GetMCPServer(app *core.MakeMCPApp) *server.MCPServer {
 		server.WithToolCapabilities(true),
 	)
 	for i := range app.Tools {
-		tool := &(app.Tools[i])
-		var mcpTool core.McpTool = (*tool).ToMcpTool()
-		handlerFunc := (*tool).GetHandler()
+		tool := (app.Tools[i])
+		var mcpTool core.McpTool = tool.ToMcpTool()
+		handlerFunc := tool.GetHandler()
 		mcp_server.AddTool(
 			toMcpGoTool(&mcpTool),
 			handlerFunc,
