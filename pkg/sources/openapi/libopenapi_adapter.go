@@ -27,6 +27,7 @@ import (
 	"github.com/pb33f/libopenapi/datamodel"
 	"github.com/pb33f/libopenapi/datamodel/high/base"
 	v3 "github.com/pb33f/libopenapi/datamodel/high/v3"
+	"github.com/pb33f/libopenapi/renderer"
 
 	core "github.com/T4cceptor/MakeMCP/pkg/core"
 )
@@ -95,8 +96,7 @@ func (a *LibopenAPIAdapter) loadSpecBytes(openAPISpecLocation string) ([]byte, e
 			return nil, fmt.Errorf("failed to fetch OpenAPI spec from URL: %w", err)
 		}
 		defer func() {
-			err := resp.Body.Close()
-			if err != nil {
+			if err := resp.Body.Close(); err != nil {
 				log.Printf("failed to close response body: %v", err)
 			}
 		}()
@@ -177,6 +177,12 @@ func (a *LibopenAPIAdapter) createToolFromOperation(method, path string, operati
 	bodySchemaDoc := a.extractRequestBodySchemaDoc(operation)
 	if bodySchemaDoc != "" {
 		description = description + "\n\n" + bodySchemaDoc
+	}
+
+	// Generate samples for better AI understanding
+	samples, err := a.generateToolSamples(operation, method, path)
+	if err == nil && samples != "" {
+		description = description + "\n\n" + samples
 	}
 
 	// Create the tool
@@ -503,4 +509,87 @@ func (a *LibopenAPIAdapter) extractNonJSONProperties(media *v3.MediaType, conten
 	required = append(required, "body")
 
 	return properties, required
+}
+
+func generateSampleRequest(samples *strings.Builder, operation *v3.Operation) error {
+	samples.WriteString("Sample Request:\n")
+	for contentPairs := operation.RequestBody.Content.First(); contentPairs != nil; contentPairs = contentPairs.Next() {
+		contentType := contentPairs.Key()
+		mediaType := contentPairs.Value()
+		if mediaType.Schema != nil {
+			mockGen := renderer.NewMockGenerator(renderer.JSON)
+			mockGen.SetPretty()
+			mockGen.DisableRequiredCheck() // Show all properties, not just required ones
+			sample, err := mockGen.GenerateMock(mediaType.Schema.Schema(), "")
+			if err == nil {
+				fmt.Fprintf(samples, "Content-Type: %s\n", contentType)
+				fmt.Fprintf(samples, "```json\n%s\n```\n\n", string(sample))
+				break // Only show one sample request
+			} else {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func generateSampleResponse(samples *strings.Builder, operation *v3.Operation) error {
+	for statusPairs := operation.Responses.Codes.First(); statusPairs != nil; statusPairs = statusPairs.Next() {
+		statusCodeStr := statusPairs.Key()
+		// Parse status code from string to int for comparison
+		var statusCode int
+		if _, err := fmt.Sscanf(statusCodeStr, "%d", &statusCode); err == nil && statusCode >= 200 && statusCode < 300 {
+			response := statusPairs.Value()
+			if response != nil && response.Content != nil {
+				fmt.Fprintf(samples, "Sample Response (%d):\n", statusCode)
+				for contentPairs := response.Content.First(); contentPairs != nil; contentPairs = contentPairs.Next() {
+					contentType := contentPairs.Key()
+					mediaType := contentPairs.Value()
+
+					if mediaType.Schema != nil {
+						mockGen := renderer.NewMockGenerator(renderer.JSON)
+						mockGen.SetPretty()
+						mockGen.DisableRequiredCheck() // Show all properties, including system-generated fields
+						sample, err := mockGen.GenerateMock(mediaType.Schema.Schema(), "")
+						if err == nil {
+							fmt.Fprintf(samples, "Content-Type: %s\n", contentType)
+							fmt.Fprintf(samples, "```json\n%s\n```\n\n", string(sample))
+							break // Only show one sample response
+						} else {
+							return err
+						}
+					}
+				}
+				break // Only show first success response
+			} else {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+// generateToolSamples creates sample request/response examples for tool descriptions
+func (a *LibopenAPIAdapter) generateToolSamples(operation *v3.Operation, method, path string) (string, error) {
+	_ = method // Future use for method-specific sample generation
+	_ = path   // Future use for path-specific sample generation
+	var samples strings.Builder
+
+	// Generate sample request
+	if operation.RequestBody != nil {
+		err := generateSampleRequest(&samples, operation)
+		if err != nil {
+			return "", err
+		}
+	}
+
+	// Generate sample response
+	if operation.Responses != nil && operation.Responses.Codes != nil {
+		err := generateSampleResponse(&samples, operation)
+		if err != nil {
+			return "", err
+		}
+	}
+
+	return samples.String(), nil
 }
