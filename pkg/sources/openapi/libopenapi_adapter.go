@@ -34,11 +34,15 @@ import (
 
 // LibopenAPIAdapter contains all libopenapi-specific functionality
 // This isolates the library-specific code and makes it easier to swap libraries later
-type LibopenAPIAdapter struct{}
+type LibopenAPIAdapter struct {
+	contentTypeRegistry *ContentTypeRegistry
+}
 
 // NewLibopenAPIAdapter creates a new adapter instance
 func NewLibopenAPIAdapter() *LibopenAPIAdapter {
-	return &LibopenAPIAdapter{}
+	return &LibopenAPIAdapter{
+		contentTypeRegistry: NewContentTypeRegistry(),
+	}
 }
 
 // LoadOpenAPISpec loads an OpenAPI specification using libopenapi
@@ -453,60 +457,17 @@ func (a *LibopenAPIAdapter) extractRequestBodyProperties(operation *v3.Operation
 	return properties, required
 }
 
-// extractPropertiesFromMedia extracts properties from a media type
+// extractPropertiesFromMedia extracts properties from a media type using content-type specific handlers
 func (a *LibopenAPIAdapter) extractPropertiesFromMedia(media *v3.MediaType, contentType string) (map[string]ToolInputProperty, []string) {
-	if contentType == "application/json" || contentType == "*/*" {
-		return a.extractJSONProperties(media)
+	handler := a.contentTypeRegistry.GetHandler(contentType)
+
+	properties, required, err := handler.ExtractParameters(media)
+	if err != nil {
+		// Log error and fall back to empty properties
+		// In the future, we might want to handle this differently
+		log.Printf("Error extracting parameters for content type %s: %v", contentType, err)
+		return make(map[string]ToolInputProperty), []string{}
 	}
-	return a.extractNonJSONProperties(media, contentType)
-}
-
-// extractJSONProperties handles JSON/generic content types
-func (a *LibopenAPIAdapter) extractJSONProperties(media *v3.MediaType) (map[string]ToolInputProperty, []string) {
-	properties := make(map[string]ToolInputProperty)
-	var required []string
-
-	if media.Schema != nil {
-		schema := media.Schema.Schema()
-		if schema != nil && schema.Properties != nil {
-			for propPairs := schema.Properties.First(); propPairs != nil; propPairs = propPairs.Next() {
-				propName := propPairs.Key()
-				propSchemaProxy := propPairs.Value()
-				propSchema := propSchemaProxy.Schema()
-				properties[propName] = ToolInputProperty{
-					Type:        a.getSchemaTypeString(propSchemaProxy),
-					Description: propSchema.Description,
-					Location:    "body",
-				}
-			}
-			if schema.Required != nil {
-				required = append(required, schema.Required...)
-			}
-		}
-	}
-	return properties, required
-}
-
-// extractNonJSONProperties handles XML and other structured types
-func (a *LibopenAPIAdapter) extractNonJSONProperties(media *v3.MediaType, contentType string) (map[string]ToolInputProperty, []string) {
-	properties := make(map[string]ToolInputProperty)
-	var required []string
-
-	if media.Schema != nil {
-		schema := media.Schema.Schema()
-		if schema != nil && schema.Properties != nil && schema.Properties.Len() > 0 {
-			// Has schema properties - treat like JSON for unknown content types
-			return a.extractJSONProperties(media)
-		}
-	}
-
-	// No schema or properties - single body parameter
-	properties["body"] = ToolInputProperty{
-		Type:        "string",
-		Description: fmt.Sprintf("%s request body", contentType),
-		Location:    "body",
-	}
-	required = append(required, "body")
 
 	return properties, required
 }

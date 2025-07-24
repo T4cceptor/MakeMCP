@@ -15,9 +15,7 @@
 package openapi
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
 	"io"
 	"log"
@@ -144,37 +142,14 @@ func buildRequestURL(baseURL, path string, params ToolParams) string {
 	return url.String()
 }
 
-// buildRequestBody prepares the request body for non-GET/DELETE methods based on content type.
+// buildRequestBody prepares the request body for non-GET/DELETE methods using content-type handlers.
 func buildRequestBody(params ToolParams, method, contentType string) (io.Reader, error) {
 	readOnlyMethods := []string{http.MethodGet, http.MethodDelete}
 	if len(params.Body) > 0 && !slices.Contains(readOnlyMethods, method) {
-		switch contentType {
-		case "text/xml", "application/xml":
-			// For XML, expect a single "body" parameter with XML string
-			if bodyContent, exists := params.Body["body"]; exists {
-				if bodyStr, ok := bodyContent.(string); ok {
-					return strings.NewReader(bodyStr), nil
-				}
-				return nil, fmt.Errorf("XML body parameter must be a string containing valid XML")
-			}
-			return nil, fmt.Errorf("XML content type requires a 'body' parameter with XML string")
-		case "text/plain":
-			// For plain text, expect a single "body" parameter
-			if bodyContent, exists := params.Body["body"]; exists {
-				if bodyStr, ok := bodyContent.(string); ok {
-					return strings.NewReader(bodyStr), nil
-				}
-				return nil, fmt.Errorf("plain text body parameter must be a string")
-			}
-			return nil, fmt.Errorf("plain text content type requires a 'body' parameter with text string")
-		default:
-			// Default to JSON serialization for application/json, */*, and others
-			jsonBody, err := json.Marshal(params.Body)
-			if err != nil {
-				return nil, err
-			}
-			return bytes.NewReader(jsonBody), nil
-		}
+		// Use the global content type registry to handle body building
+		registry := NewContentTypeRegistry()
+		handler := registry.GetHandler(contentType)
+		return handler.BuildRequestBody(params.Body)
 	}
 	return nil, nil
 }
@@ -205,6 +180,35 @@ func setRequestHeaders(req *http.Request, params ToolParams, hasBody bool, conte
 		}
 		req.Header.Set("Cookie", cookies.String())
 	}
+}
+
+func buildRequest(
+	ctx context.Context,
+	request mcp.CallToolRequest,
+	makeMcpTool *OpenAPIMcpTool,
+	apiClient *APIClient,
+) (*http.Request, error) {
+	// Parse parameters using prefix approach
+	argsRaw := request.GetArguments()
+	params := parsePrefixedParameters(argsRaw)
+	method := makeMcpTool.OpenAPIHandlerInput.Method
+
+	// Build URL and body using helper functions
+	fullURL := buildRequestURL(apiClient.BaseURL, makeMcpTool.OpenAPIHandlerInput.Path, params)
+	bodyReader, err := buildRequestBody(params, method, makeMcpTool.OpenAPIHandlerInput.ContentType)
+	if err != nil {
+		return nil, err
+	}
+
+	// Create the HTTP request
+	req, err := http.NewRequestWithContext(ctx, method, fullURL, bodyReader)
+	if err != nil {
+		return nil, err
+	}
+
+	// Apply headers and cookies using helper function
+	setRequestHeaders(req, params, bodyReader != nil, makeMcpTool.OpenAPIHandlerInput.ContentType)
+	return req, nil
 }
 
 // GetHandlerFunction creates an MCP tool handler function for an OpenAPI operation.
@@ -249,27 +253,11 @@ func GetHandlerFunction(makeMcpTool *OpenAPIMcpTool, apiClient *APIClient) func(
 	request mcp.CallToolRequest,
 ) (*mcp.CallToolResult, error) {
 	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-		// Parse parameters using prefix approach
-		argsRaw := request.GetArguments()
-		params := parsePrefixedParameters(argsRaw)
-
-		method := makeMcpTool.OpenAPIHandlerInput.Method
-
-		// Build URL and body using helper functions
-		fullURL := buildRequestURL(apiClient.BaseURL, makeMcpTool.OpenAPIHandlerInput.Path, params)
-		bodyReader, err := buildRequestBody(params, method, makeMcpTool.OpenAPIHandlerInput.ContentType)
+		// Get request
+		req, err := buildRequest(ctx, request, makeMcpTool, apiClient)
 		if err != nil {
 			return nil, err
 		}
-
-		// Create the HTTP request
-		req, err := http.NewRequestWithContext(ctx, method, fullURL, bodyReader)
-		if err != nil {
-			return nil, err
-		}
-
-		// Apply headers and cookies using helper function
-		setRequestHeaders(req, params, bodyReader != nil, makeMcpTool.OpenAPIHandlerInput.ContentType)
 
 		// Execute request
 		resp, err := apiClient.HTTPClient.Do(req)
@@ -290,7 +278,7 @@ func GetHandlerFunction(makeMcpTool *OpenAPIMcpTool, apiClient *APIClient) func(
 		// Format the response for the MCP client
 		result := fmt.Sprintf(
 			"HTTP %s %s\nStatus: %d\nResponse: %s",
-			method, fullURL, resp.StatusCode, string(body),
+			req.Method, req.URL, resp.StatusCode, string(body),
 		)
 
 		// TODO: what about other response types?
