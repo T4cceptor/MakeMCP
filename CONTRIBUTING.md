@@ -117,7 +117,7 @@ When testing changes:
 When adding support for new source types (CLI tools, frameworks):
 1. Create new parser in separate file (e.g., `cli_mcp.go`)
 2. Implement common interfaces from `models.go`
-3. Add CLI commands in `makemcp.go`
+3. Add CLI commands in `cmd/main.go`
 4. Update documentation and examples
 
 ### OpenAPI Enhancements

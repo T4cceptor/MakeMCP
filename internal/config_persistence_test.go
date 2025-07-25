@@ -41,7 +41,7 @@ func TestSaveToFile(t *testing.T) {
 				Version:    "1.0.0",
 				SourceType: "openapi",
 				SourceParams: &openapi.OpenAPIParams{
-					SharedParams: &core.SharedParams{
+					BaseAppParams: &core.BaseAppParams{
 						File:       "test-config",
 						Transport:  core.TransportTypeStdio,
 						SourceType: "openapi",
@@ -62,7 +62,7 @@ func TestSaveToFile(t *testing.T) {
 				Version:    "1.0.0",
 				SourceType: "openapi",
 				SourceParams: &openapi.OpenAPIParams{
-					SharedParams: &core.SharedParams{
+					BaseAppParams: &core.BaseAppParams{
 						Transport:  core.TransportTypeHTTP,
 						SourceType: "openapi",
 					},
@@ -82,7 +82,7 @@ func TestSaveToFile(t *testing.T) {
 				Version:    "1.0.0",
 				SourceType: "openapi",
 				SourceParams: &openapi.OpenAPIParams{
-					SharedParams: &core.SharedParams{
+					BaseAppParams: &core.BaseAppParams{
 						Transport:  core.TransportTypeStdio,
 						SourceType: "openapi",
 					},
@@ -147,7 +147,7 @@ func TestSaveToFile_InvalidPath(t *testing.T) {
 		Name:       "test",
 		SourceType: "openapi",
 		SourceParams: &openapi.OpenAPIParams{
-			SharedParams: &core.SharedParams{
+			BaseAppParams: &core.BaseAppParams{
 				File:       "/invalid/path/that/does/not/exist/config",
 				SourceType: "openapi",
 			},
@@ -398,7 +398,7 @@ func TestSaveAndLoadRoundTrip(t *testing.T) {
 		Version:    "2.0.0",
 		SourceType: "openapi",
 		SourceParams: &openapi.OpenAPIParams{
-			SharedParams: &core.SharedParams{
+			BaseAppParams: &core.BaseAppParams{
 				File:       "roundtrip",
 				Transport:  core.TransportTypeStdio,
 				SourceType: "openapi",

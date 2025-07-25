@@ -22,9 +22,9 @@ import (
 	"net/http"
 	"slices"
 	"strings"
+	"time"
 
 	core "github.com/T4cceptor/MakeMCP/pkg/core"
-	"github.com/mark3labs/mcp-go/mcp"
 )
 
 // OpenAPISource implements the sources.Source interface for OpenAPI specifications
@@ -45,7 +45,7 @@ func (s *OpenAPISource) Name() string {
 }
 
 // ParseParams converts raw CLI input into typed OpenAPI parameters
-func (s *OpenAPISource) ParseParams(input *core.CLIParamsInput) (core.SourceParams, error) {
+func (s *OpenAPISource) ParseParams(input *core.CLIParamsInput) (core.AppParams, error) {
 	return ParseFromCLIInput(input)
 }
 
@@ -55,7 +55,7 @@ func (s *OpenAPISource) UnmarshalConfig(data []byte) (*core.MakeMCPApp, error) {
 }
 
 // Parse converts an OpenAPI specification into a MakeMCPApp configuration
-func (s *OpenAPISource) Parse(params core.SourceParams) (*core.MakeMCPApp, error) {
+func (s *OpenAPISource) Parse(params core.AppParams) (*core.MakeMCPApp, error) {
 	// Type assert to OpenAPIParams
 	openAPIParams, ok := params.(*OpenAPIParams)
 	if !ok {
@@ -119,7 +119,7 @@ func (s *OpenAPISource) AttachToolHandlers(app *core.MakeMCPApp) error {
 	for i, tool := range app.Tools {
 		// TODO: ugly type assertion
 		openApiTool := tool.(*OpenAPIMcpTool)
-		openApiTool.handler = GetHandlerFunction(openApiTool, apiClient)
+		openApiTool.handler = GetOpenAPIHandler(openApiTool, apiClient)
 		app.Tools[i] = openApiTool
 	}
 	return nil
@@ -182,87 +182,67 @@ func setRequestHeaders(req *http.Request, params ToolParams, hasBody bool, conte
 	}
 }
 
-func buildRequest(
-	ctx context.Context,
-	request mcp.CallToolRequest,
-	makeMcpTool *OpenAPIMcpTool,
-	apiClient *APIClient,
-) (*http.Request, error) {
-	// Parse parameters using prefix approach
-	argsRaw := request.GetArguments()
-	params := parsePrefixedParameters(argsRaw)
-	method := makeMcpTool.OpenAPIHandlerInput.Method
-
-	// Build URL and body using helper functions
-	fullURL := buildRequestURL(apiClient.BaseURL, makeMcpTool.OpenAPIHandlerInput.Path, params)
-	bodyReader, err := buildRequestBody(params, method, makeMcpTool.OpenAPIHandlerInput.ContentType)
-	if err != nil {
-		return nil, err
-	}
-
-	// Create the HTTP request
-	req, err := http.NewRequestWithContext(ctx, method, fullURL, bodyReader)
-	if err != nil {
-		return nil, err
-	}
-
-	// Apply headers and cookies using helper function
-	setRequestHeaders(req, params, bodyReader != nil, makeMcpTool.OpenAPIHandlerInput.ContentType)
-	return req, nil
-}
-
-// GetHandlerFunction creates an MCP tool handler function for an OpenAPI operation.
+// GetOpenAPIHandler creates a transport-agnostic MCP tool handler function for an OpenAPI operation.
 //
-// This function returns a handler that processes MCP tool requests and converts them
+// This function returns a handler that processes abstract tool execution contexts and converts them
 // into HTTP requests to the underlying API. It handles parameter parsing, HTTP request
-// construction, execution, and response formatting.
+// construction, execution, and response formatting with rich metadata.
 //
 // Parameters:
 //   - makeMcpTool: MCP tool configuration containing OpenAPI operation details
 //   - apiClient: HTTP client configured with base URL and other settings
 //
 // Returns:
-//   - A function that handles MCP tool requests with the signature:
-//     func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error)
+//   - A transport-agnostic handler with the signature:
+//     func(ctx context.Context, request ToolExecutionContext) (ToolExecutionResult, error)
 //
 // Request Processing Flow:
-//  1. Parse prefixed parameters from the MCP request (e.g., path__user_id)
+//  1. Parse prefixed parameters from the execution context (e.g., path__user_id)
 //  2. Group parameters by location (path, query, header, cookie, body)
 //  3. Substitute path parameters in the URL template
 //  4. Encode query parameters for GET/DELETE requests
-//  5. Marshal body parameters to JSON for POST/PUT requests
+//  5. Marshal body parameters using appropriate content type handlers
 //  6. Set headers and cookies on the HTTP request
-//  7. Execute the HTTP request
-//  8. Format and return the response
+//  7. Execute the HTTP request with timing
+//  8. Create rich result with metadata for processors
 //
-// Parameter Format:
-// The handler expects parameters in prefix format:
-//   - path__id: substituted into URL path placeholders
-//   - query__limit: added as URL query parameters
-//   - header__authorization: set as HTTP headers
-//   - cookie__session_id: set as HTTP cookies
-//   - body__email: included in JSON request body
-//
-// Response Format:
-// Returns a formatted text result containing:
-//   - HTTP method and final URL
-//   - Response status code
-//   - Response body content
-func GetHandlerFunction(makeMcpTool *OpenAPIMcpTool, apiClient *APIClient) func(
-	ctx context.Context,
-	request mcp.CallToolRequest,
-) (*mcp.CallToolResult, error) {
-	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-		// Get request
-		req, err := buildRequest(ctx, request, makeMcpTool, apiClient)
+// The result includes comprehensive metadata that processors can use for:
+//   - Content formatting (JSON vs text)
+//   - Error handling and display
+//   - Performance monitoring
+//   - Security redaction
+//   - Response caching decisions
+func GetOpenAPIHandler(makeMcpTool *OpenAPIMcpTool, apiClient *APIClient) core.MakeMcpToolHandler {
+	return func(ctx context.Context, request core.ToolExecutionContext) (core.ToolExecutionResult, error) {
+		startTime := time.Now()
+
+		// Parse parameters using prefix approach
+		params := parsePrefixedParameters(request.GetParameters())
+		method := makeMcpTool.OpenAPIHandlerInput.Method
+
+		// Build URL and body using helper functions
+		fullURL := buildRequestURL(apiClient.BaseURL, makeMcpTool.OpenAPIHandlerInput.Path, params)
+		bodyReader, err := buildRequestBody(params, method, makeMcpTool.OpenAPIHandlerInput.ContentType)
 		if err != nil {
-			return nil, err
+			return core.NewBasicExecutionResult("Error: ", fmt.Errorf("failed to build request body: %w", err)), nil
 		}
 
-		// Execute request
-		resp, err := apiClient.HTTPClient.Do(req)
+		// Create the HTTP request
+		req, err := http.NewRequestWithContext(ctx, method, fullURL, bodyReader)
 		if err != nil {
-			return nil, err
+			return core.NewBasicExecutionResult("Error: ", fmt.Errorf("failed to create HTTP request: %w", err)), nil
+		}
+
+		// Apply headers and cookies using helper function
+		setRequestHeaders(req, params, bodyReader != nil, makeMcpTool.OpenAPIHandlerInput.ContentType)
+
+		// Execute request with timing
+		requestStartTime := time.Now()
+		resp, err := apiClient.HTTPClient.Do(req)
+		responseTime := time.Since(requestStartTime)
+
+		if err != nil {
+			return core.NewBasicExecutionResult("Error: ", fmt.Errorf("HTTP request failed: %w", err)), nil
 		}
 		defer func() {
 			if err := resp.Body.Close(); err != nil {
@@ -272,16 +252,54 @@ func GetHandlerFunction(makeMcpTool *OpenAPIMcpTool, apiClient *APIClient) func(
 
 		body, err := io.ReadAll(resp.Body)
 		if err != nil {
-			return nil, err
+			return core.NewBasicExecutionResult(
+				"Error: ",
+				fmt.Errorf("failed to read response body: %w", err),
+			), nil
 		}
 
-		// Format the response for the MCP client
+		// Format the response for the client (same format as old handler for compatibility)
 		result := fmt.Sprintf(
 			"HTTP %s %s\nStatus: %d\nResponse: %s",
 			req.Method, req.URL, resp.StatusCode, string(body),
 		)
 
-		// TODO: what about other response types?
-		return mcp.NewToolResultText(result), nil
+		// Create execution result with rich metadata
+		executionResult := core.NewBasicExecutionResult(result, nil)
+		metadata := executionResult.GetMetadata()
+
+		// Set rich metadata for processors using Metadata interface
+		metadata.Set("executionTime", time.Since(startTime))
+		metadata.Set("httpStatus", resp.StatusCode)
+		metadata.Set("responseTime", responseTime)
+		metadata.Set("httpMethod", method)
+		metadata.Set("finalURL", req.URL.String())
+		metadata.Set("responseHeaders", resp.Header)
+
+		// Set content type based on response
+		contentType := resp.Header.Get("Content-Type")
+		if contentType != "" {
+			metadata.Set("actualContentType", contentType)
+		}
+
+		// Set processing hints as custom metadata for processors to use
+		if strings.Contains(contentType, "application/json") {
+			metadata.Set("isJsonData", true)
+			metadata.Set("preferredFormat", "json")
+		}
+
+		// Mark errors based on HTTP status
+		if resp.StatusCode >= 400 {
+			metadata.Set("isErrorResponse", true)
+			metadata.Set("shouldRedact", true) // Error responses might contain sensitive info
+		}
+
+		// Large responses should be truncated for display
+		if len(body) > 10000 {
+			metadata.Set("shouldTruncate", true)
+			metadata.Set("maxDisplaySize", 10000)
+		}
+
+		return executionResult, nil
 	}
 }

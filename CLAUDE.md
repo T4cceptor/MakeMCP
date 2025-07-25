@@ -16,13 +16,13 @@ The current implementation focuses on OpenAPI specifications as a well-defined s
 ## Project Structure
 
 ### Entry Point
-- `cmd/makemcp.go` - Main CLI application using urfave/cli/v3
+- `cmd/main.go` - Main CLI application using urfave/cli/v3
 
 ### Core Packages
 - `internal/` - Internal application logic
-  - `commands.go` - CLI command definitions and handlers
-  - `loader.go` - Configuration loading and management
-  - `orchestrator.go` - MCP server orchestration
+  - `cli_commands.go` - CLI command definitions and handlers
+  - `config_persistence.go` - Configuration saving and loading (file I/O)
+  - `controller.go` - Orchestrates MCP server creation and source integration
   - `server.go` - MCP server implementation
 - `pkg/core/` - Core MCP functionality
   - `app.go` - MCP application structure
@@ -134,13 +134,13 @@ make tag-release patch    # patch version bump
 ### Manual Build Commands
 ```bash
 # Build the binary manually
-go build -o build/makemcp cmd/makemcp.go
+go build -o build/makemcp cmd/main.go
 
 # Run directly
-go run cmd/makemcp.go [commands]
+go run cmd/main.go [commands]
 
 # Build with version info
-go build -ldflags "-s -w -X main.version=v1.0.0" -o build/makemcp cmd/makemcp.go
+go build -ldflags "-s -w -X main.version=v1.0.0" -o build/makemcp cmd/main.go
 ```
 
 ### Testing the CLI
@@ -226,7 +226,7 @@ The project now has comprehensive linting configuration and all critical issues 
 ### Build System Fixes
 **GitHub Actions:**
 - Fixed build failures in CI/CD pipeline by correcting Go build paths
-- Updated both `ci.yml` and `release.yml` to use `./cmd/makemcp.go` instead of `.`
+- Updated both `ci.yml` and `release.yml` to use `./cmd/main.go` instead of `.`
 - Cross-platform builds now work correctly for all target platforms
 
 **Makefile Improvements:**

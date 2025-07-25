@@ -23,16 +23,18 @@ import (
 	"github.com/urfave/cli/v3"
 )
 
+var loadCommand cli.Command = cli.Command{
+	Name:        "load",
+	Usage:       "Load and start MCP server from existing config file",
+	Description: "Loads a MakeMCP configuration file and starts the MCP server with the saved configuration.",
+	ArgsUsage:   "<config-file-path>",
+	Action:      handleLoadCommand,
+}
+
 // GetInternalCommands returns all CLI commands related to MakeMCP config file management.
 func GetInternalCommands() []*cli.Command {
 	return []*cli.Command{
-		{
-			Name:        "load",
-			Usage:       "Load and start MCP server from existing config file",
-			Description: "Loads a MakeMCP configuration file and starts the MCP server with the saved configuration.",
-			ArgsUsage:   "<config-file-path>",
-			Action:      handleLoadCommand,
-		},
+		&loadCommand,
 	}
 }
 

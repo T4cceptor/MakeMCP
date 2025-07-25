@@ -7,7 +7,7 @@ import (
 
 // UnmarshalConfigWithTypedParams is a generic helper function that unmarshals a MakeMCPApp
 // configuration with both tools and source parameters of specific concrete types, then converts them to interfaces.
-func UnmarshalConfigWithTypedParams[T MakeMCPTool, P SourceParams](data []byte) (*MakeMCPApp, error) {
+func UnmarshalConfigWithTypedParams[T MakeMCPTool, P AppParams](data []byte) (*MakeMCPApp, error) {
 	var configData struct {
 		Name         string `json:"name"`
 		Version      string `json:"version"`

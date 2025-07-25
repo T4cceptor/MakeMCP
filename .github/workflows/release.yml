@@ -71,7 +71,7 @@ jobs:
           
           # Build binary
           BINARY_NAME="makemcp${{ matrix.ext }}"
-          go build -ldflags "-s -w -X main.version=${VERSION}" -o "${BINARY_NAME}" ./cmd/makemcp.go
+          go build -ldflags "-s -w -X main.version=${VERSION}" -o "${BINARY_NAME}" ./cmd/main.go
           
           # Create archive
           ARCHIVE_NAME="makemcp-${VERSION}-${{ matrix.name }}"

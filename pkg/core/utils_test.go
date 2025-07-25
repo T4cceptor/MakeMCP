@@ -18,17 +18,15 @@ import (
 	"context"
 	"encoding/json"
 	"testing"
-
-	"github.com/mark3labs/mcp-go/mcp"
 )
 
 // testSourceParams implements SourceParams for testing.
 type testSourceParams struct {
-	sharedParams *SharedParams
+	sharedParams *BaseAppParams
 	CustomField  string `json:"customField"`
 }
 
-func (t *testSourceParams) GetSharedParams() *SharedParams {
+func (t *testSourceParams) GetSharedParams() *BaseAppParams {
 	return t.sharedParams
 }
 
@@ -55,9 +53,9 @@ func (t *testTool) GetName() string {
 	return t.Name
 }
 
-func (t *testTool) GetHandler() func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-		return &mcp.CallToolResult{}, nil
+func (t *testTool) GetHandler() MakeMcpToolHandler {
+	return func(ctx context.Context, request ToolExecutionContext) (ToolExecutionResult, error) {
+		return NewBasicExecutionResult("test response", nil), nil
 	}
 }
 

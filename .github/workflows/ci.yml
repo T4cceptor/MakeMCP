@@ -86,7 +86,7 @@ jobs:
 
       - name: Test build with version
         run: |
-          go build -ldflags "-X main.version=test-build" -o makemcp ./cmd/makemcp.go
+          go build -ldflags "-X main.version=test-build" -o makemcp ./cmd/main.go
           ./makemcp --version
 
   integration:

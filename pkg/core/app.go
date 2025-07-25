@@ -21,11 +21,11 @@ type MakeMCPApp struct {
 	Version      string        `json:"version"`    // Version of the app
 	SourceType   string        `json:"sourceType"` // Type of source (openapi, cli, etc.)
 	Tools        []MakeMCPTool `json:"tools"`      // Tools the MCP server will provide
-	SourceParams SourceParams  `json:"config"`     // Source-specific parameters
+	SourceParams AppParams     `json:"config"`     // Source-specific parameters
 }
 
 // NewMakeMCPApp creates a new MakeMCPApp with provided parameters.
-func NewMakeMCPApp(name, version string, sourceParams SourceParams) MakeMCPApp {
+func NewMakeMCPApp(name, version string, sourceParams AppParams) MakeMCPApp {
 	return MakeMCPApp{
 		Name:         name,
 		Version:      version,

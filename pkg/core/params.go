@@ -16,11 +16,11 @@ package core
 
 import "encoding/json"
 
-// SourceParams defines the interface for source-specific parameters.
+// AppParams defines the interface for source-specific parameters.
 // Each source type implements this interface with their own typed parameters
-type SourceParams interface {
+type AppParams interface {
 	// GetSharedParams returns the shared parameters that all sources need
-	GetSharedParams() *SharedParams
+	GetSharedParams() *BaseAppParams
 
 	// Validate performs source-specific parameter validation
 	Validate() error
@@ -32,8 +32,8 @@ type SourceParams interface {
 	GetSourceType() string
 }
 
-// SharedParams holds parameters that are common across all source types.
-type SharedParams struct {
+// BaseAppParams holds parameters that are common across all source types.
+type BaseAppParams struct {
 	Transport  TransportType `json:"transport"`  // stdio or http
 	ConfigOnly bool          `json:"configOnly"` // if true, only creates config file
 	Port       string        `json:"port"`       // only valid with transport=http
@@ -42,14 +42,14 @@ type SharedParams struct {
 	File       string        `json:"file"`       // filename (without extension) for config file
 }
 
-// NewSharedParams creates a new SharedParams with default values.
-func NewSharedParams(sourceType string, transport TransportType) *SharedParams {
+// NewBaseParams creates a new SharedParams with default values.
+func NewBaseParams(sourceType string, transport TransportType) *BaseAppParams {
 	// Validate transport type - if invalid, default to stdio
 	if !transport.IsValid() {
 		transport = TransportTypeStdio
 	}
 
-	return &SharedParams{
+	return &BaseAppParams{
 		Transport:  transport,
 		ConfigOnly: false,
 		Port:       "8080",
@@ -59,18 +59,9 @@ func NewSharedParams(sourceType string, transport TransportType) *SharedParams {
 	}
 }
 
-// ToJSON returns a JSON representation of the SharedParams for logging and debugging.
-func (s *SharedParams) ToJSON() string {
-	jsonBytes, err := json.Marshal(s)
-	if err != nil {
-		return `{"error": "failed to marshal SharedParams to JSON"}`
-	}
-	return string(jsonBytes)
-}
-
 // CLIParamsInput holds raw CLI input that needs to be parsed into typed parameters.
 type CLIParamsInput struct {
-	SharedParams *SharedParams  `json:"shared"`
+	SharedParams *BaseAppParams `json:"shared"`
 	CliFlags     map[string]any `json:"flags"` // raw CLI flags to be parsed by sources
 	CliArgs      []string       `json:"args"`  // raw CLI arguments
 }

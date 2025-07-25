@@ -65,7 +65,7 @@ paths:
 	config := datamodel.NewDocumentConfiguration()
 	config.AllowFileReferences = true
 	config.AllowRemoteReferences = true
-	
+
 	document, err := libopenapi.NewDocumentWithConfiguration([]byte(spec), config)
 	if err != nil {
 		return nil, err

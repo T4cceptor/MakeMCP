@@ -96,7 +96,7 @@ func GetInputConfig(source sources.MakeMCPSource, cmd *cli.Command) *core.CLIPar
 	}
 	cliArgs := cmd.Args().Slice()
 
-	sharedParams := core.NewSharedParams(
+	sharedParams := core.NewBaseParams(
 		source.Name(),
 		core.TransportType(cmd.String("transport")),
 	)

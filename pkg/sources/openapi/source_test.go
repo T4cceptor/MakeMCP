@@ -61,7 +61,7 @@ func TestOpenAPISource_Parse(t *testing.T) {
 	source := &OpenAPISource{}
 
 	// Create input parameters using new structure
-	sharedParams := core.NewSharedParams("openapi", core.TransportTypeStdio)
+	sharedParams := core.NewBaseParams("openapi", core.TransportTypeStdio)
 	input := &core.CLIParamsInput{
 		SharedParams: sharedParams,
 		CliFlags: map[string]any{
@@ -127,7 +127,7 @@ func TestOpenAPISource_Integration(t *testing.T) {
 	source := NewOpenAPISource()
 
 	// Test the full cycle
-	sharedParams := core.NewSharedParams("openapi", core.TransportTypeStdio)
+	sharedParams := core.NewBaseParams("openapi", core.TransportTypeStdio)
 	input := &core.CLIParamsInput{
 		SharedParams: sharedParams,
 		CliFlags: map[string]any{

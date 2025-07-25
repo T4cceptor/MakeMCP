@@ -15,15 +15,14 @@
 package internal
 
 import (
+	"context"
 	"fmt"
 	"log"
+	"time"
 
 	core "github.com/T4cceptor/MakeMCP/pkg/core"
 	"github.com/mark3labs/mcp-go/mcp"
-	"github.com/mark3labs/mcp-go/server" // TODO: dependency on mcp-go
-	// TODO: refactor code so only this class interacts with mcp-go.
-	// this likely requires heavy transformations for types of the different
-	// functions
+	"github.com/mark3labs/mcp-go/server"
 )
 
 // ServerFactory abstracts server creation and lifecycle for dependency injection.
@@ -57,7 +56,7 @@ func (f *ProductionServerFactory) CreateHTTPServer(mcpServer *server.MCPServer) 
 // CreateStdioServer creates a production stdio server wrapper.
 func (f *ProductionServerFactory) CreateStdioServer(mcpServer *server.MCPServer) StdioServer {
 	return &productionStdioServer{
-		mcpServer: mcpServer,
+		server: mcpServer,
 	}
 }
 
@@ -73,23 +72,24 @@ func (s *productionHTTPServer) Start(addr string) error {
 
 // Stop stops the HTTP server.
 func (s *productionHTTPServer) Stop() error {
-	// TODO: Implement proper shutdown when mcp-go supports it
+	s.server.Shutdown(context.TODO())
 	return nil
 }
 
 // productionStdioServer wraps the real stdio server.
 type productionStdioServer struct {
-	mcpServer *server.MCPServer
+	server *server.MCPServer
 }
 
 // Serve starts serving the MCP server over stdio.
 func (s *productionStdioServer) Serve() error {
-	return server.ServeStdio(s.mcpServer)
+	return server.ServeStdio(s.server)
 }
 
 // Stop stops the stdio server.
 func (s *productionStdioServer) Stop() error {
 	// TODO: Implement proper shutdown when mcp-go supports it
+	// TODO: check, it might not even be necessary
 	return nil
 }
 
@@ -127,6 +127,7 @@ func StartServer(app *core.MakeMCPApp) error {
 
 // GetMCPServer creates and configures an MCP server from the application configuration..
 func GetMCPServer(app *core.MakeMCPApp) *server.MCPServer {
+	// Note: app needs to have valid function handlers attached at this point
 	mcp_server := server.NewMCPServer(
 		app.Name,
 		app.Version,
@@ -135,12 +136,12 @@ func GetMCPServer(app *core.MakeMCPApp) *server.MCPServer {
 	for i := range app.Tools {
 		tool := (app.Tools[i])
 		var mcpTool core.McpTool = tool.ToMcpTool()
-		handlerFunc := tool.GetHandler()
-		mcp_server.AddTool(
-			toMcpGoTool(&mcpTool),
-			handlerFunc,
-		)
-		log.Printf("Registered TOOL: %s with func: %p", mcpTool.Name, handlerFunc)
+		transportAgnosticHandler := tool.GetHandler()
+
+		// Adapt the transport-agnostic handler to work with mcp-go
+		mcpGoHandler := adaptHandlerToMcpGo(transportAgnosticHandler)
+		mcp_server.AddTool(toMcpGoTool(&mcpTool), mcpGoHandler)
+		log.Printf("Registered TOOL: %s with transport-agnostic handler (adapted)", mcpTool.Name)
 	}
 	return mcp_server
 }
@@ -161,5 +162,81 @@ func toMcpGoTool(tool *core.McpTool) mcp.Tool {
 			IdempotentHint:  tool.Annotations.IdempotentHint,
 			OpenWorldHint:   tool.Annotations.OpenWorldHint,
 		},
+	}
+}
+
+/////////////////////////////////////////
+// Transport adapters
+// - these functions convert between MakeMCP abstraction types and mcp-go types
+/////////////////////////////////////////
+
+// mcpRequestToExecutionContext converts an mcp-go request to our abstract execution context.
+func mcpRequestToExecutionContext(request mcp.CallToolRequest) core.ToolExecutionContext {
+	// Extract parameters from the request arguments
+	parameters := request.GetArguments()
+	context := core.NewBasicExecutionContext(
+		request.Params.Name,
+		parameters,
+		"", // mcp-go doesn't provide request IDs, we could generate one
+	)
+
+	// Set metadata with source information using simplified interface
+	context.GetMetadata().Set("mcpMethod", "callTool")
+	context.GetMetadata().Set("callTime", time.Now())
+
+	return context
+}
+
+// getContentFromString is a helper function that converts any string into a valid mcp.Content map
+func getContentFromString(text string) []mcp.Content {
+	return []mcp.Content{
+		mcp.TextContent{
+			Type: "text",
+			Text: text,
+		},
+	}
+}
+
+// executionResultToMcpResult converts our abstract execution result to an mcp-go result.
+func executionResultToMcpResult(result core.ToolExecutionResult) (*mcp.CallToolResult, error) {
+	// Check for error by examining if GetError() returns non-nil
+	isError := false
+	content := getContentFromString(result.GetContent())
+	res := mcp.Result{
+		Meta: result.GetMetadata().GetAll(), // Get map from Metadata interface
+	}
+	if result.GetError() != nil {
+		isError = true
+		content = getContentFromString(result.GetError().Error())
+	}
+
+	return &mcp.CallToolResult{
+		Result:  res,
+		IsError: isError,
+		Content: content,
+		// TODO: we only support text results currently
+		// - which could be a problem for API returning different content
+		// For those cases we likely need some way to pick the right content type
+	}, nil
+}
+
+// adaptHandlerToMcpGo creates an mcp-go compatible handler from our transport-agnostic handler.
+func adaptHandlerToMcpGo(handler core.MakeMcpToolHandler) func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		// Convert mcp-go request to abstract context
+		execContext := mcpRequestToExecutionContext(request)
+
+		// Call the transport-agnostic handler
+		result, err := handler(ctx, execContext)
+		if err != nil {
+			// If handler returned an error, create an error result
+			return &mcp.CallToolResult{
+				IsError: true,
+				Content: getContentFromString(err.Error()),
+			}, nil
+		}
+
+		// Convert abstract result to mcp-go result
+		return executionResultToMcpResult(result)
 	}
 }

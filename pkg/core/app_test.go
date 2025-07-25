@@ -17,17 +17,15 @@ package core
 import (
 	"context"
 	"testing"
-
-	"github.com/mark3labs/mcp-go/mcp"
 )
 
 // mockSourceParams implements SourceParams for testing.
 type mockSourceParams struct {
-	sharedParams *SharedParams
+	sharedParams *BaseAppParams
 	sourceType   string
 }
 
-func (m *mockSourceParams) GetSharedParams() *SharedParams {
+func (m *mockSourceParams) GetSharedParams() *BaseAppParams {
 	return m.sharedParams
 }
 
@@ -53,9 +51,9 @@ func (m *mockTool) GetName() string {
 	return m.name
 }
 
-func (m *mockTool) GetHandler() func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-		return &mcp.CallToolResult{}, nil
+func (m *mockTool) GetHandler() MakeMcpToolHandler {
+	return func(ctx context.Context, request ToolExecutionContext) (ToolExecutionResult, error) {
+		return NewBasicExecutionResult("mock response", nil), nil
 	}
 }
 
@@ -81,7 +79,7 @@ func TestNewMakeMCPApp(t *testing.T) {
 		name         string
 		appName      string
 		version      string
-		sourceParams SourceParams
+		sourceParams AppParams
 		wantName     string
 		wantVersion  string
 		wantSource   string
@@ -91,7 +89,7 @@ func TestNewMakeMCPApp(t *testing.T) {
 			appName: "TestApp",
 			version: "1.0.0",
 			sourceParams: &mockSourceParams{
-				sharedParams: NewSharedParams("test", TransportTypeStdio),
+				sharedParams: NewBaseParams("test", TransportTypeStdio),
 				sourceType:   "test",
 			},
 			wantName:    "TestApp",
@@ -103,7 +101,7 @@ func TestNewMakeMCPApp(t *testing.T) {
 			appName: "",
 			version: "2.0.0",
 			sourceParams: &mockSourceParams{
-				sharedParams: NewSharedParams("openapi", TransportTypeHTTP),
+				sharedParams: NewBaseParams("openapi", TransportTypeHTTP),
 				sourceType:   "openapi",
 			},
 			wantName:    "",
@@ -115,7 +113,7 @@ func TestNewMakeMCPApp(t *testing.T) {
 			appName: "HTTPApp",
 			version: "1.2.3",
 			sourceParams: &mockSourceParams{
-				sharedParams: NewSharedParams("cli", TransportTypeHTTP),
+				sharedParams: NewBaseParams("cli", TransportTypeHTTP),
 				sourceType:   "cli",
 			},
 			wantName:    "HTTPApp",
@@ -149,7 +147,7 @@ func TestNewMakeMCPApp(t *testing.T) {
 
 func TestMakeMCPApp_ToolsManagement(t *testing.T) {
 	sourceParams := &mockSourceParams{
-		sharedParams: NewSharedParams("test", TransportTypeStdio),
+		sharedParams: NewBaseParams("test", TransportTypeStdio),
 		sourceType:   "test",
 	}
 
@@ -187,7 +185,7 @@ func TestMakeMCPApp_SourceTypeFromParams(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			sourceParams := &mockSourceParams{
-				sharedParams: NewSharedParams(tt.sourceType, TransportTypeStdio),
+				sharedParams: NewBaseParams(tt.sourceType, TransportTypeStdio),
 				sourceType:   tt.sourceType,
 			}
 

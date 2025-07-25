@@ -15,10 +15,7 @@
 package core
 
 import (
-	"context"
 	"encoding/json"
-
-	"github.com/mark3labs/mcp-go/mcp"
 )
 
 // TransportType defines the transport mechanism for the MCP server.
@@ -79,12 +76,10 @@ type McpTool struct {
 }
 
 // MakeMCPTool defines the interface that all MCP tools must implement.
+// This interface is now transport-agnostic, allowing tools to work with any
+// transport mechanism (MCP stdio, HTTP, gRPC, etc.).
 type MakeMCPTool interface {
 	GetName() string
-	GetHandler() func(
-		ctx context.Context,
-		request mcp.CallToolRequest,
-		// TODO: refactor to get rid of mcp-go dependency
-	) (*mcp.CallToolResult, error)
+	GetHandler() MakeMcpToolHandler
 	ToMcpTool() McpTool
 }

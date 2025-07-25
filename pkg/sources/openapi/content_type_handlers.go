@@ -31,15 +31,15 @@ import (
 type ContentTypeHandler interface {
 	// GetContentTypes returns the content types this handler supports
 	GetContentTypes() []string
-	
+
 	// ExtractParameters extracts tool input properties from an OpenAPI media type schema
 	// Returns: properties map, required fields list, and error
 	ExtractParameters(media *v3.MediaType) (map[string]ToolInputProperty, []string, error)
-	
+
 	// BuildRequestBody builds the HTTP request body from parsed parameters
 	// Returns: request body reader and error
 	BuildRequestBody(bodyParams map[string]any) (io.Reader, error)
-	
+
 	// GetParameterPrefix returns the prefix to use for parameters of this content type
 	// This helps distinguish between different content types in the final tool schema
 	GetParameterPrefix() string
@@ -56,17 +56,17 @@ func NewContentTypeRegistry() *ContentTypeRegistry {
 	registry := &ContentTypeRegistry{
 		handlers: make(map[string]ContentTypeHandler),
 	}
-	
+
 	// Register default handlers
 	registry.RegisterHandler(&JSONContentTypeHandler{})
 	registry.RegisterHandler(&XMLContentTypeHandler{})
 	registry.RegisterHandler(&FormURLEncodedHandler{})
 	registry.RegisterHandler(&MultipartFormDataHandler{})
 	registry.RegisterHandler(&PlainTextHandler{})
-	
+
 	// Set JSON as fallback for unknown content types
 	registry.fallback = &JSONContentTypeHandler{}
-	
+
 	return registry
 }
 
@@ -82,7 +82,7 @@ func (r *ContentTypeRegistry) GetHandler(contentType string) ContentTypeHandler 
 	if handler, exists := r.handlers[contentType]; exists {
 		return handler
 	}
-	
+
 	// Try wildcard patterns
 	parts := strings.Split(contentType, "/")
 	if len(parts) == 2 {
@@ -91,7 +91,7 @@ func (r *ContentTypeRegistry) GetHandler(contentType string) ContentTypeHandler 
 			return handler
 		}
 	}
-	
+
 	// Return fallback handler
 	return r.fallback
 }
@@ -121,18 +121,18 @@ func (h *JSONContentTypeHandler) ExtractParameters(media *v3.MediaType) (map[str
 		propName := propPairs.Key()
 		propSchemaProxy := propPairs.Value()
 		propSchema := propSchemaProxy.Schema()
-		
+
 		properties[propName] = ToolInputProperty{
 			Type:        getSchemaTypeString(propSchemaProxy),
 			Description: propSchema.Description,
 			Location:    "body",
 		}
 	}
-	
+
 	if schema.Required != nil {
 		required = append(required, schema.Required...)
 	}
-	
+
 	return properties, required, nil
 }
 
@@ -140,7 +140,7 @@ func (h *JSONContentTypeHandler) BuildRequestBody(bodyParams map[string]any) (io
 	if len(bodyParams) == 0 {
 		return nil, nil
 	}
-	
+
 	jsonBody, err := json.Marshal(bodyParams)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal JSON body: %w", err)
@@ -179,14 +179,14 @@ func (h *XMLContentTypeHandler) ExtractParameters(media *v3.MediaType) (map[stri
 			propName := propPairs.Key()
 			propSchemaProxy := propPairs.Value()
 			propSchema := propSchemaProxy.Schema()
-			
+
 			properties[propName] = ToolInputProperty{
 				Type:        getSchemaTypeString(propSchemaProxy),
 				Description: propSchema.Description,
 				Location:    "body",
 			}
 		}
-		
+
 		if schema.Required != nil {
 			required = append(required, schema.Required...)
 		}
@@ -199,7 +199,7 @@ func (h *XMLContentTypeHandler) ExtractParameters(media *v3.MediaType) (map[stri
 		}
 		required = append(required, "body")
 	}
-	
+
 	return properties, required, nil
 }
 
@@ -207,15 +207,15 @@ func (h *XMLContentTypeHandler) BuildRequestBody(bodyParams map[string]any) (io.
 	if len(bodyParams) == 0 {
 		return nil, nil
 	}
-	
-	// Check if this is raw XML (single "body" parameter)  
+
+	// Check if this is raw XML (single "body" parameter)
 	if bodyContent, exists := bodyParams["body"]; exists && len(bodyParams) == 1 {
 		if bodyStr, ok := bodyContent.(string); ok {
 			return strings.NewReader(bodyStr), nil
 		}
 		return nil, fmt.Errorf("XML body parameter must be a string containing valid XML")
 	}
-	
+
 	// TODO: For structured XML, we should convert the object to actual XML
 	// For now, fall back to JSON serialization (same as current behavior)
 	// In the future, we could use xml.Marshal or a dedicated XML library
@@ -262,7 +262,7 @@ func (h *FormURLEncodedHandler) ExtractParameters(media *v3.MediaType) (map[stri
 		propName := propPairs.Key()
 		propSchemaProxy := propPairs.Value()
 		propSchema := propSchemaProxy.Schema()
-		
+
 		prefixedName := fmt.Sprintf("form__%s", propName)
 		properties[prefixedName] = ToolInputProperty{
 			Type:        getSchemaTypeString(propSchemaProxy),
@@ -270,13 +270,13 @@ func (h *FormURLEncodedHandler) ExtractParameters(media *v3.MediaType) (map[stri
 			Location:    "body",
 		}
 	}
-	
+
 	if schema.Required != nil {
 		for _, req := range schema.Required {
 			required = append(required, fmt.Sprintf("form__%s", req))
 		}
 	}
-	
+
 	return properties, required, nil
 }
 
@@ -284,7 +284,7 @@ func (h *FormURLEncodedHandler) BuildRequestBody(bodyParams map[string]any) (io.
 	if len(bodyParams) == 0 {
 		return nil, nil
 	}
-	
+
 	// Check for single body parameter (raw form data)
 	if bodyContent, exists := bodyParams["body"]; exists && len(bodyParams) == 1 {
 		if bodyStr, ok := bodyContent.(string); ok {
@@ -292,7 +292,7 @@ func (h *FormURLEncodedHandler) BuildRequestBody(bodyParams map[string]any) (io.
 		}
 		return nil, fmt.Errorf("form body parameter must be a string")
 	}
-	
+
 	// Build URL encoded form data from form__ prefixed parameters
 	formData := url.Values{}
 	for paramName, value := range bodyParams {
@@ -301,11 +301,11 @@ func (h *FormURLEncodedHandler) BuildRequestBody(bodyParams map[string]any) (io.
 			formData.Set(fieldName, fmt.Sprintf("%v", value))
 		}
 	}
-	
+
 	if len(formData) == 0 {
 		return nil, fmt.Errorf("no form__ prefixed parameters found for form URL encoding")
 	}
-	
+
 	encodedData := formData.Encode()
 	return strings.NewReader(encodedData), nil
 }
@@ -346,28 +346,28 @@ func (h *MultipartFormDataHandler) ExtractParameters(media *v3.MediaType) (map[s
 		propName := propPairs.Key()
 		propSchemaProxy := propPairs.Value()
 		propSchema := propSchemaProxy.Schema()
-		
+
 		prefixedName := fmt.Sprintf("multipart__%s", propName)
-		
+
 		// Detect file uploads (binary format)
 		propType := getSchemaTypeString(propSchemaProxy)
 		if propSchema != nil && propSchema.Format == "binary" {
 			propType = "file"
 		}
-		
+
 		properties[prefixedName] = ToolInputProperty{
 			Type:        propType,
 			Description: propSchema.Description,
 			Location:    "body",
 		}
 	}
-	
+
 	if schema.Required != nil {
 		for _, req := range schema.Required {
 			required = append(required, fmt.Sprintf("multipart__%s", req))
 		}
 	}
-	
+
 	return properties, required, nil
 }
 
@@ -375,7 +375,7 @@ func (h *MultipartFormDataHandler) BuildRequestBody(bodyParams map[string]any) (
 	if len(bodyParams) == 0 {
 		return nil, nil
 	}
-	
+
 	// Check for single body parameter (raw multipart data)
 	if bodyContent, exists := bodyParams["body"]; exists && len(bodyParams) == 1 {
 		if bodyStr, ok := bodyContent.(string); ok {
@@ -383,17 +383,17 @@ func (h *MultipartFormDataHandler) BuildRequestBody(bodyParams map[string]any) (
 		}
 		return nil, fmt.Errorf("multipart body parameter must be a string")
 	}
-	
+
 	// Build multipart form data from multipart__ prefixed parameters
 	var body bytes.Buffer
 	writer := multipart.NewWriter(&body)
-	
+
 	hasMultipartParams := false
 	for paramName, value := range bodyParams {
 		if strings.HasPrefix(paramName, "multipart__") {
 			hasMultipartParams = true
 			fieldName := strings.TrimPrefix(paramName, "multipart__")
-			
+
 			// TODO: Handle file uploads properly
 			// For now, treat everything as form fields
 			if err := writer.WriteField(fieldName, fmt.Sprintf("%v", value)); err != nil {
@@ -401,18 +401,18 @@ func (h *MultipartFormDataHandler) BuildRequestBody(bodyParams map[string]any) (
 			}
 		}
 	}
-	
+
 	if !hasMultipartParams {
 		return nil, fmt.Errorf("no multipart__ prefixed parameters found for multipart form data")
 	}
-	
+
 	if err := writer.Close(); err != nil {
 		return nil, fmt.Errorf("failed to close multipart writer: %w", err)
 	}
-	
+
 	// Note: The boundary should be set in the Content-Type header by the caller
 	// It can be retrieved via writer.Boundary()
-	
+
 	return &body, nil
 }
 
@@ -438,7 +438,7 @@ func (h *PlainTextHandler) ExtractParameters(media *v3.MediaType) (map[string]To
 		Location:    "body",
 	}
 	required = append(required, "body")
-	
+
 	return properties, required, nil
 }
 
@@ -446,14 +446,14 @@ func (h *PlainTextHandler) BuildRequestBody(bodyParams map[string]any) (io.Reade
 	if len(bodyParams) == 0 {
 		return nil, nil
 	}
-	
+
 	if bodyContent, exists := bodyParams["body"]; exists {
 		if bodyStr, ok := bodyContent.(string); ok {
 			return strings.NewReader(bodyStr), nil
 		}
 		return nil, fmt.Errorf("plain text body parameter must be a string")
 	}
-	
+
 	return nil, fmt.Errorf("plain text content type requires a 'body' parameter")
 }
 
@@ -468,15 +468,15 @@ func getSchemaTypeString(schemaProxy *base.SchemaProxy) string {
 	if schemaProxy == nil {
 		return "string"
 	}
-	
+
 	schema := schemaProxy.Schema()
 	if schema == nil {
 		return "string"
 	}
-	
+
 	if len(schema.Type) > 0 {
 		return schema.Type[0]
 	}
-	
+
 	return "string"
 }

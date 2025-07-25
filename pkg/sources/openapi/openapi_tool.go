@@ -1,21 +1,15 @@
 package openapi
 
 import (
-	"context"
-
 	core "github.com/T4cceptor/MakeMCP/pkg/core"
-	"github.com/mark3labs/mcp-go/mcp"
 )
 
 // OpenAPIMcpTool represents an MCP tool generated from an OpenAPI operation.
+// This tool is now transport-agnostic and can work with any transport mechanism.
 type OpenAPIMcpTool struct {
 	core.McpTool
-	OpenAPIHandlerInput *OpenAPIHandlerInput `json:"oapiHandlerInput,omitempty"`
-	handler             func(
-		ctx context.Context,
-		request mcp.CallToolRequest,
-		// TODO: refactor to get rid of mcp-go dependency
-	) (*mcp.CallToolResult, error) `json:"-"`
+	OpenAPIHandlerInput *OpenAPIHandlerInput    `json:"oapiHandlerInput,omitempty"`
+	handler             core.MakeMcpToolHandler `json:"-"`
 }
 
 // GetName returns the name of the OpenAPI MCP tool.
@@ -28,11 +22,7 @@ func (o *OpenAPIMcpTool) ToMcpTool() core.McpTool {
 	return o.McpTool
 }
 
-// GetHandler returns the MCP tool handler function for processing requests.
-func (o *OpenAPIMcpTool) GetHandler() func(
-	ctx context.Context,
-	request mcp.CallToolRequest,
-	// TODO: refactor to get rid of mcp-go dependency
-) (*mcp.CallToolResult, error) {
+// GetHandler returns the transport-agnostic tool handler function for processing requests.
+func (o *OpenAPIMcpTool) GetHandler() core.MakeMcpToolHandler {
 	return o.handler
 }
