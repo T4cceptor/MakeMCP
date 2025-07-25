@@ -17,20 +17,20 @@ package core
 // MakeMCPApp holds all information about the MCP server.
 // Main data structure representing a complete MCP application configuration
 type MakeMCPApp struct {
-	Name         string        `json:"name"`       // Name of the App
-	Version      string        `json:"version"`    // Version of the app
-	SourceType   string        `json:"sourceType"` // Type of source (openapi, cli, etc.)
-	Tools        []MakeMCPTool `json:"tools"`      // Tools the MCP server will provide
-	SourceParams AppParams     `json:"config"`     // Source-specific parameters
+	Name       string        `json:"name"`       // Name of the App
+	Version    string        `json:"version"`    // Version of the app
+	SourceType string        `json:"sourceType"` // Type of source (openapi, cli, etc.)
+	Tools      []MakeMCPTool `json:"tools"`      // Tools the MCP server will provide
+	AppParams  AppParams     `json:"config"`     // Source-specific parameters
 }
 
 // NewMakeMCPApp creates a new MakeMCPApp with provided parameters.
-func NewMakeMCPApp(name, version string, sourceParams AppParams) MakeMCPApp {
+func NewMakeMCPApp(name, version string, appParams AppParams) MakeMCPApp {
 	return MakeMCPApp{
-		Name:         name,
-		Version:      version,
-		SourceType:   sourceParams.GetSourceType(),
-		Tools:        []MakeMCPTool{},
-		SourceParams: sourceParams,
+		Name:       name,
+		Version:    version,
+		SourceType: appParams.GetSourceType(),
+		Tools:      []MakeMCPTool{},
+		AppParams:  appParams,
 	}
 }

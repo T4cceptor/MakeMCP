@@ -72,12 +72,12 @@ func TestOpenAPISource_Parse(t *testing.T) {
 	}
 
 	// Parse input into typed parameters
-	sourceParams, err := source.ParseParams(input)
+	appParams, err := source.ParseParams(input)
 	if err != nil {
 		t.Fatalf("Expected no error from ParseParams but got: %v", err)
 	}
 
-	app, err := source.Parse(sourceParams)
+	app, err := source.Parse(appParams)
 	if err != nil {
 		t.Fatalf("Expected no error from Parse but got: %v", err)
 	}
@@ -89,8 +89,8 @@ func TestOpenAPISource_Parse(t *testing.T) {
 	if app.Version == "" {
 		t.Error("Expected non-empty app version")
 	}
-	if app.SourceParams.GetSourceType() != "openapi" {
-		t.Errorf("Expected source type 'openapi', got %s", app.SourceParams.GetSourceType())
+	if app.AppParams.GetSourceType() != "openapi" {
+		t.Errorf("Expected source type 'openapi', got %s", app.AppParams.GetSourceType())
 	}
 
 	// Test tools generation - FastAPI spec has these operations
@@ -138,13 +138,13 @@ func TestOpenAPISource_Integration(t *testing.T) {
 	}
 
 	// Test parameter parsing
-	sourceParams, err := source.ParseParams(input)
+	appParams, err := source.ParseParams(input)
 	if err != nil {
 		t.Fatalf("Expected no error from ParseParams but got: %v", err)
 	}
 
 	// Test document parsing and tool generation
-	app, err := source.Parse(sourceParams)
+	app, err := source.Parse(appParams)
 	if err != nil {
 		t.Fatalf("Expected no error from Parse but got: %v", err)
 	}

@@ -99,7 +99,7 @@ func (s *productionStdioServer) Stop() error {
 func StartServerWithFactory(app *core.MakeMCPApp, factory ServerFactory) error {
 	mcpServer := GetMCPServer(app)
 
-	sharedParams := app.SourceParams.GetSharedParams()
+	sharedParams := app.AppParams.GetSharedParams()
 	switch sharedParams.Transport {
 	case core.TransportTypeHTTP:
 		log.Println("Starting as http MCP server...")

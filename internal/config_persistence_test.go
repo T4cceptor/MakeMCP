@@ -40,7 +40,7 @@ func TestSaveToFile(t *testing.T) {
 				Name:       "test-app",
 				Version:    "1.0.0",
 				SourceType: "openapi",
-				SourceParams: &openapi.OpenAPIParams{
+				AppParams: &openapi.OpenAPIParams{
 					BaseAppParams: &core.BaseAppParams{
 						File:       "test-config",
 						Transport:  core.TransportTypeStdio,
@@ -61,7 +61,7 @@ func TestSaveToFile(t *testing.T) {
 				Name:       "my-api",
 				Version:    "1.0.0",
 				SourceType: "openapi",
-				SourceParams: &openapi.OpenAPIParams{
+				AppParams: &openapi.OpenAPIParams{
 					BaseAppParams: &core.BaseAppParams{
 						Transport:  core.TransportTypeHTTP,
 						SourceType: "openapi",
@@ -81,7 +81,7 @@ func TestSaveToFile(t *testing.T) {
 				Name:       "",
 				Version:    "1.0.0",
 				SourceType: "openapi",
-				SourceParams: &openapi.OpenAPIParams{
+				AppParams: &openapi.OpenAPIParams{
 					BaseAppParams: &core.BaseAppParams{
 						Transport:  core.TransportTypeStdio,
 						SourceType: "openapi",
@@ -146,7 +146,7 @@ func TestSaveToFile_InvalidPath(t *testing.T) {
 	app := &core.MakeMCPApp{
 		Name:       "test",
 		SourceType: "openapi",
-		SourceParams: &openapi.OpenAPIParams{
+		AppParams: &openapi.OpenAPIParams{
 			BaseAppParams: &core.BaseAppParams{
 				File:       "/invalid/path/that/does/not/exist/config",
 				SourceType: "openapi",
@@ -397,7 +397,7 @@ func TestSaveAndLoadRoundTrip(t *testing.T) {
 		Name:       "roundtrip-test",
 		Version:    "2.0.0",
 		SourceType: "openapi",
-		SourceParams: &openapi.OpenAPIParams{
+		AppParams: &openapi.OpenAPIParams{
 			BaseAppParams: &core.BaseAppParams{
 				File:       "roundtrip",
 				Transport:  core.TransportTypeStdio,

@@ -19,25 +19,25 @@ import (
 	"testing"
 )
 
-// mockSourceParams implements SourceParams for testing.
-type mockSourceParams struct {
+// mockAppParams implements AppParams for testing.
+type mockAppParams struct {
 	sharedParams *BaseAppParams
 	sourceType   string
 }
 
-func (m *mockSourceParams) GetSharedParams() *BaseAppParams {
+func (m *mockAppParams) GetSharedParams() *BaseAppParams {
 	return m.sharedParams
 }
 
-func (m *mockSourceParams) Validate() error {
+func (m *mockAppParams) Validate() error {
 	return nil
 }
 
-func (m *mockSourceParams) ToJSON() string {
+func (m *mockAppParams) ToJSON() string {
 	return `{"sourceType": "` + m.sourceType + `"}`
 }
 
-func (m *mockSourceParams) GetSourceType() string {
+func (m *mockAppParams) GetSourceType() string {
 	return m.sourceType
 }
 
@@ -76,19 +76,19 @@ func (m *mockTool) ToJSON() string {
 
 func TestNewMakeMCPApp(t *testing.T) {
 	tests := []struct {
-		name         string
-		appName      string
-		version      string
-		sourceParams AppParams
-		wantName     string
-		wantVersion  string
-		wantSource   string
+		name        string
+		appName     string
+		version     string
+		appParams   AppParams
+		wantName    string
+		wantVersion string
+		wantSource  string
 	}{
 		{
 			name:    "create app with basic params",
 			appName: "TestApp",
 			version: "1.0.0",
-			sourceParams: &mockSourceParams{
+			appParams: &mockAppParams{
 				sharedParams: NewBaseParams("test", TransportTypeStdio),
 				sourceType:   "test",
 			},
@@ -100,7 +100,7 @@ func TestNewMakeMCPApp(t *testing.T) {
 			name:    "create app with empty name",
 			appName: "",
 			version: "2.0.0",
-			sourceParams: &mockSourceParams{
+			appParams: &mockAppParams{
 				sharedParams: NewBaseParams("openapi", TransportTypeHTTP),
 				sourceType:   "openapi",
 			},
@@ -112,7 +112,7 @@ func TestNewMakeMCPApp(t *testing.T) {
 			name:    "create app with different transport",
 			appName: "HTTPApp",
 			version: "1.2.3",
-			sourceParams: &mockSourceParams{
+			appParams: &mockAppParams{
 				sharedParams: NewBaseParams("cli", TransportTypeHTTP),
 				sourceType:   "cli",
 			},
@@ -124,7 +124,7 @@ func TestNewMakeMCPApp(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			app := NewMakeMCPApp(tt.appName, tt.version, tt.sourceParams)
+			app := NewMakeMCPApp(tt.appName, tt.version, tt.appParams)
 
 			if app.Name != tt.wantName {
 				t.Errorf("NewMakeMCPApp().Name = %v, want %v", app.Name, tt.wantName)
@@ -135,8 +135,8 @@ func TestNewMakeMCPApp(t *testing.T) {
 			if app.SourceType != tt.wantSource {
 				t.Errorf("NewMakeMCPApp().SourceType = %v, want %v", app.SourceType, tt.wantSource)
 			}
-			if app.SourceParams != tt.sourceParams {
-				t.Errorf("NewMakeMCPApp().SourceParams = %v, want %v", app.SourceParams, tt.sourceParams)
+			if app.AppParams != tt.appParams {
+				t.Errorf("NewMakeMCPApp().AppParams = %v, want %v", app.AppParams, tt.appParams)
 			}
 			if len(app.Tools) != 0 {
 				t.Errorf("NewMakeMCPApp().Tools should be empty, got %d tools", len(app.Tools))
@@ -146,12 +146,12 @@ func TestNewMakeMCPApp(t *testing.T) {
 }
 
 func TestMakeMCPApp_ToolsManagement(t *testing.T) {
-	sourceParams := &mockSourceParams{
+	appParams := &mockAppParams{
 		sharedParams: NewBaseParams("test", TransportTypeStdio),
 		sourceType:   "test",
 	}
 
-	app := NewMakeMCPApp("TestApp", "1.0.0", sourceParams)
+	app := NewMakeMCPApp("TestApp", "1.0.0", appParams)
 
 	// Test adding tools
 	tool1 := &mockTool{name: "tool1", description: "First tool"}
@@ -184,12 +184,12 @@ func TestMakeMCPApp_SourceTypeFromParams(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			sourceParams := &mockSourceParams{
+			appParams := &mockAppParams{
 				sharedParams: NewBaseParams(tt.sourceType, TransportTypeStdio),
 				sourceType:   tt.sourceType,
 			}
 
-			app := NewMakeMCPApp("TestApp", "1.0.0", sourceParams)
+			app := NewMakeMCPApp("TestApp", "1.0.0", appParams)
 
 			if app.SourceType != tt.sourceType {
 				t.Errorf("Expected SourceType %s, got %s", tt.sourceType, app.SourceType)

@@ -110,9 +110,9 @@ func convertToMakeMCPTools(tools []OpenAPIMcpTool) []core.MakeMCPTool {
 // AttachToolHandlers adds tool handler functions to app.
 func (s *OpenAPISource) AttachToolHandlers(app *core.MakeMCPApp) error {
 	// Type assert to get OpenAPI-specific parameters
-	openAPIParams, ok := app.SourceParams.(*OpenAPIParams)
+	openAPIParams, ok := app.AppParams.(*OpenAPIParams)
 	if !ok {
-		return fmt.Errorf("expected OpenAPIParams, got %T", app.SourceParams)
+		return fmt.Errorf("expected OpenAPIParams, got %T", app.AppParams)
 	}
 
 	apiClient := NewAPIClient(openAPIParams.BaseURL, openAPIParams.Timeout)

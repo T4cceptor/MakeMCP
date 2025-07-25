@@ -189,7 +189,7 @@ func TestStartServerWithFactory(t *testing.T) {
 		app := &core.MakeMCPApp{
 			Name:    "HTTP Test Server",
 			Version: "1.0.0",
-			SourceParams: &openapi.OpenAPIParams{
+			AppParams: &openapi.OpenAPIParams{
 				BaseAppParams: &core.BaseAppParams{
 					Transport:  core.TransportTypeHTTP,
 					Port:       "8080",
@@ -222,7 +222,7 @@ func TestStartServerWithFactory(t *testing.T) {
 		app := &core.MakeMCPApp{
 			Name:    "HTTP Test Server",
 			Version: "1.0.0",
-			SourceParams: &openapi.OpenAPIParams{
+			AppParams: &openapi.OpenAPIParams{
 				BaseAppParams: &core.BaseAppParams{
 					Transport:  core.TransportTypeHTTP,
 					Port:       "8080",
@@ -255,7 +255,7 @@ func TestStartServerWithFactory(t *testing.T) {
 		app := &core.MakeMCPApp{
 			Name:    "Stdio Test Server",
 			Version: "1.0.0",
-			SourceParams: &openapi.OpenAPIParams{
+			AppParams: &openapi.OpenAPIParams{
 				BaseAppParams: &core.BaseAppParams{
 					Transport:  core.TransportTypeStdio,
 					Port:       "8080", // Should be ignored for stdio
@@ -288,7 +288,7 @@ func TestStartServerWithFactory(t *testing.T) {
 		app := &core.MakeMCPApp{
 			Name:    "Stdio Test Server",
 			Version: "1.0.0",
-			SourceParams: &openapi.OpenAPIParams{
+			AppParams: &openapi.OpenAPIParams{
 				BaseAppParams: &core.BaseAppParams{
 					Transport:  core.TransportTypeStdio,
 					SourceType: "openapi",
@@ -320,7 +320,7 @@ func TestStartServerWithFactory(t *testing.T) {
 		app := &core.MakeMCPApp{
 			Name:    "Invalid Transport Server",
 			Version: "1.0.0",
-			SourceParams: &openapi.OpenAPIParams{
+			AppParams: &openapi.OpenAPIParams{
 				BaseAppParams: &core.BaseAppParams{
 					Transport:  "invalid",
 					Port:       "8080",
@@ -356,7 +356,7 @@ func TestStartServer(t *testing.T) {
 		app := &core.MakeMCPApp{
 			Name:    "Test Server",
 			Version: "1.0.0",
-			SourceParams: &openapi.OpenAPIParams{
+			AppParams: &openapi.OpenAPIParams{
 				BaseAppParams: &core.BaseAppParams{
 					Transport:  "invalid",
 					Port:       "8080",
