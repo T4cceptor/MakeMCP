@@ -298,8 +298,8 @@ func (a *LibopenAPIAdapter) getToolAnnotations(method string, path string, opera
 	return annotation
 }
 
-// getSchemaTypeString returns the type string from a libopenapi schema
-func (a *LibopenAPIAdapter) getSchemaTypeString(schemaProxy *base.SchemaProxy) string {
+// GetSchemaTypeString returns the type string from a libopenapi schema
+func GetSchemaTypeString(schemaProxy *base.SchemaProxy) string {
 	if schemaProxy != nil {
 		schema := schemaProxy.Schema()
 		if schema != nil && len(schema.Type) > 0 {
@@ -323,7 +323,7 @@ func (a *LibopenAPIAdapter) extractParametersByIn(operation *v3.Operation, in Pa
 			continue
 		}
 		if param.In == string(in) {
-			typeName := a.getSchemaTypeString(param.Schema)
+			typeName := GetSchemaTypeString(param.Schema)
 			properties[param.Name] = ToolInputProperty{
 				Type:        typeName,
 				Description: param.Description,
@@ -360,7 +360,7 @@ func (a *LibopenAPIAdapter) generateSchemaDocumentation(schemaProxy *base.Schema
 			required = " (required)"
 		}
 
-		doc.WriteString(fmt.Sprintf("- %s: %s%s", propName, a.getSchemaTypeString(propSchemaProxy), required))
+		doc.WriteString(fmt.Sprintf("- %s: %s%s", propName, GetSchemaTypeString(propSchemaProxy), required))
 		if propSchemaProxy.Schema() != nil && propSchemaProxy.Schema().Description != "" {
 			doc.WriteString(fmt.Sprintf(" - %s", propSchemaProxy.Schema().Description))
 		}

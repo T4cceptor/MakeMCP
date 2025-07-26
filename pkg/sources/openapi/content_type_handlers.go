@@ -23,9 +23,10 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/pb33f/libopenapi/datamodel/high/base"
 	v3 "github.com/pb33f/libopenapi/datamodel/high/v3"
 )
+
+// TODO: check if code here can be simplified
 
 // ContentTypeHandler defines the interface for handling different content types
 type ContentTypeHandler interface {
@@ -39,10 +40,6 @@ type ContentTypeHandler interface {
 	// BuildRequestBody builds the HTTP request body from parsed parameters
 	// Returns: request body reader and error
 	BuildRequestBody(bodyParams map[string]any) (io.Reader, error)
-
-	// GetParameterPrefix returns the prefix to use for parameters of this content type
-	// This helps distinguish between different content types in the final tool schema
-	GetParameterPrefix() string
 }
 
 // ContentTypeRegistry manages content type handlers
@@ -125,7 +122,7 @@ func (h *JSONContentTypeHandler) ExtractParameters(media *v3.MediaType) (map[str
 		propSchema := propSchemaProxy.Schema()
 
 		properties[propName] = ToolInputProperty{
-			Type:        getSchemaTypeString(propSchemaProxy),
+			Type:        GetSchemaTypeString(propSchemaProxy),
 			Description: propSchema.Description,
 			Location:    "body",
 		}
@@ -151,11 +148,6 @@ func (h *JSONContentTypeHandler) BuildRequestBody(bodyParams map[string]any) (io
 	return bytes.NewReader(jsonBody), nil
 }
 
-// GetParameterPrefix returns the parameter prefix used for this content type.
-func (h *JSONContentTypeHandler) GetParameterPrefix() string {
-	return "" // No prefix for JSON parameters
-}
-
 // XMLContentTypeHandler handles XML content types (both structured and raw)
 type XMLContentTypeHandler struct{}
 
@@ -166,6 +158,8 @@ func (h *XMLContentTypeHandler) GetContentTypes() []string {
 
 // ExtractParameters extracts parameters from XML schema for tool input.
 func (h *XMLContentTypeHandler) ExtractParameters(media *v3.MediaType) (map[string]ToolInputProperty, []string, error) {
+	// TODO: refactor this, all content type "ExtratParameters" method look almost the same
+	// I don't feel like having different classes/implementation for each content type is necessary
 	properties := make(map[string]ToolInputProperty)
 	var required []string
 
@@ -187,7 +181,7 @@ func (h *XMLContentTypeHandler) ExtractParameters(media *v3.MediaType) (map[stri
 			propSchema := propSchemaProxy.Schema()
 
 			properties[propName] = ToolInputProperty{
-				Type:        getSchemaTypeString(propSchemaProxy),
+				Type:        GetSchemaTypeString(propSchemaProxy),
 				Description: propSchema.Description,
 				Location:    "body",
 			}
@@ -233,11 +227,6 @@ func (h *XMLContentTypeHandler) BuildRequestBody(bodyParams map[string]any) (io.
 	return bytes.NewReader(jsonBody), nil
 }
 
-// GetParameterPrefix returns the parameter prefix used for this content type.
-func (h *XMLContentTypeHandler) GetParameterPrefix() string {
-	return "" // No prefix for XML parameters
-}
-
 // FormURLEncodedHandler handles application/x-www-form-urlencoded
 type FormURLEncodedHandler struct{}
 
@@ -275,7 +264,7 @@ func (h *FormURLEncodedHandler) ExtractParameters(media *v3.MediaType) (map[stri
 
 		prefixedName := fmt.Sprintf("form__%s", propName)
 		properties[prefixedName] = ToolInputProperty{
-			Type:        getSchemaTypeString(propSchemaProxy),
+			Type:        GetSchemaTypeString(propSchemaProxy),
 			Description: propSchema.Description,
 			Location:    "body",
 		}
@@ -321,11 +310,6 @@ func (h *FormURLEncodedHandler) BuildRequestBody(bodyParams map[string]any) (io.
 	return strings.NewReader(encodedData), nil
 }
 
-// GetParameterPrefix returns the parameter prefix used for this content type.
-func (h *FormURLEncodedHandler) GetParameterPrefix() string {
-	return "form__"
-}
-
 // MultipartFormDataHandler handles multipart/form-data
 type MultipartFormDataHandler struct{}
 
@@ -364,7 +348,7 @@ func (h *MultipartFormDataHandler) ExtractParameters(media *v3.MediaType) (map[s
 		prefixedName := fmt.Sprintf("multipart__%s", propName)
 
 		// Detect file uploads (binary format)
-		propType := getSchemaTypeString(propSchemaProxy)
+		propType := GetSchemaTypeString(propSchemaProxy)
 		if propSchema != nil && propSchema.Format == "binary" {
 			propType = "file"
 		}
@@ -431,11 +415,6 @@ func (h *MultipartFormDataHandler) BuildRequestBody(bodyParams map[string]any) (
 	return &body, nil
 }
 
-// GetParameterPrefix returns the parameter prefix used for this content type.
-func (h *MultipartFormDataHandler) GetParameterPrefix() string {
-	return "multipart__"
-}
-
 // PlainTextHandler handles text/plain and text/* content types
 type PlainTextHandler struct{}
 
@@ -474,29 +453,4 @@ func (h *PlainTextHandler) BuildRequestBody(bodyParams map[string]any) (io.Reade
 	}
 
 	return nil, fmt.Errorf("plain text content type requires a 'body' parameter")
-}
-
-// GetParameterPrefix returns the parameter prefix used for this content type.
-func (h *PlainTextHandler) GetParameterPrefix() string {
-	return "" // No prefix for plain text
-}
-
-// Helper function to get schema type string (this should use the existing implementation)
-func getSchemaTypeString(schemaProxy *base.SchemaProxy) string {
-	// TODO: This should use the existing getSchemaTypeString method from LibopenAPIAdapter
-	// For now, provide a basic implementation
-	if schemaProxy == nil {
-		return "string"
-	}
-
-	schema := schemaProxy.Schema()
-	if schema == nil {
-		return "string"
-	}
-
-	if len(schema.Type) > 0 {
-		return schema.Type[0]
-	}
-
-	return "string"
 }
