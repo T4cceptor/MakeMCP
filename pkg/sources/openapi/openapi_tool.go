@@ -26,3 +26,24 @@ func (o *OpenAPIMcpTool) ToMcpTool() core.McpTool {
 func (o *OpenAPIMcpTool) GetHandler() core.MakeMcpToolHandler {
 	return o.handler
 }
+
+// OpenAPIHandlerInput defines how a particular endpoint is to be called
+type OpenAPIHandlerInput struct {
+	Method      string            `json:"method"`
+	Path        string            `json:"path"`
+	Headers     map[string]string `json:"headers"`
+	Cookies     map[string]string `json:"cookies"`
+	BodyAppend  map[string]any    `json:"bodyAppend"`
+	ContentType string            `json:"contentType,omitempty"`
+}
+
+// NewOpenAPIHandlerInput creates a new OpenAPIHandlerInput
+func NewOpenAPIHandlerInput(method, path string) OpenAPIHandlerInput {
+	return OpenAPIHandlerInput{
+		Method:     method,
+		Path:       path,
+		Headers:    make(map[string]string),
+		Cookies:    make(map[string]string),
+		BodyAppend: make(map[string]any),
+	}
+}
