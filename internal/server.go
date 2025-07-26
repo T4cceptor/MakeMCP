@@ -72,7 +72,10 @@ func (s *productionHTTPServer) Start(addr string) error {
 
 // Stop stops the HTTP server.
 func (s *productionHTTPServer) Stop() error {
-	s.server.Shutdown(context.TODO())
+	err := s.server.Shutdown(context.TODO())
+	if err != nil {
+		fmt.Printf("Error during shutdown: %v\n", err)
+	}
 	return nil
 }
 

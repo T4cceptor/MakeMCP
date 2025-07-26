@@ -117,9 +117,14 @@ func NewBasicExecutionContext(toolName string, parameters map[string]any, reques
 	}
 }
 
-func (b *BasicExecutionContext) GetToolName() string           { return b.toolName }
+// GetToolName returns the name of the tool being executed.
+func (b *BasicExecutionContext) GetToolName() string { return b.toolName }
+
+// GetParameters returns the input parameters for the tool.
 func (b *BasicExecutionContext) GetParameters() map[string]any { return b.parameters }
-func (b *BasicExecutionContext) GetMetadata() Metadata         { return b.metadata }
+
+// GetMetadata returns the execution metadata.
+func (b *BasicExecutionContext) GetMetadata() Metadata { return b.metadata }
 
 // BasicExecutionResult is a simple implementation of ToolExecutionResult.
 // Uses the Metadata interface for consistency with execution context.
@@ -158,8 +163,13 @@ func NewBasicExecutionError(err error) *BasicExecutionResult {
 	}
 }
 
-func (b *BasicExecutionResult) GetContent() string    { return b.content }
-func (b *BasicExecutionResult) GetError() error       { return b.err }
+// GetContent returns the primary content/output of the tool execution.
+func (b *BasicExecutionResult) GetContent() string { return b.content }
+
+// GetError returns the error if execution failed, nil otherwise.
+func (b *BasicExecutionResult) GetError() error { return b.err }
+
+// GetMetadata returns the execution metadata.
 func (b *BasicExecutionResult) GetMetadata() Metadata { return b.metadata }
 
 // BasicExecutionMetadata is a simple implementation of Metadata.
@@ -186,17 +196,22 @@ func NewBasicExecutionMetadata(sourceType string, requestTime time.Time) *BasicE
 	return metadata
 }
 
+// GetSourceType returns the type of source (e.g., "openapi", "cli", "graphql").
 func (b *BasicExecutionMetadata) GetSourceType() string { return b.sourceType }
 
+// GetAll returns all metadata key-value pairs.
 func (b *BasicExecutionMetadata) GetAll() map[string]any { return b.data }
 
+// SetAll replaces all metadata with the provided key-value pairs.
 func (b *BasicExecutionMetadata) SetAll(data map[string]any) { b.data = data }
 
+// Get returns the value associated with the provided key.
 func (b *BasicExecutionMetadata) Get(key string) (any, bool) {
 	val, ok := b.data[key]
 	return val, ok
 }
 
+// Set stores the provided key-value pair in the metadata.
 func (b *BasicExecutionMetadata) Set(key string, value any) {
 	b.data[key] = value
 }

@@ -99,10 +99,12 @@ func (r *ContentTypeRegistry) GetHandler(contentType string) ContentTypeHandler 
 // JSONContentTypeHandler handles JSON content types
 type JSONContentTypeHandler struct{}
 
+// GetContentTypes returns the content types supported by this handler.
 func (h *JSONContentTypeHandler) GetContentTypes() []string {
 	return []string{"application/json", "*/*", "application/hal+json", "application/vnd.api+json"}
 }
 
+// ExtractParameters extracts parameters from JSON schema for tool input.
 func (h *JSONContentTypeHandler) ExtractParameters(media *v3.MediaType) (map[string]ToolInputProperty, []string, error) {
 	properties := make(map[string]ToolInputProperty)
 	var required []string
@@ -136,6 +138,7 @@ func (h *JSONContentTypeHandler) ExtractParameters(media *v3.MediaType) (map[str
 	return properties, required, nil
 }
 
+// BuildRequestBody builds a JSON request body from the provided parameters.
 func (h *JSONContentTypeHandler) BuildRequestBody(bodyParams map[string]any) (io.Reader, error) {
 	if len(bodyParams) == 0 {
 		return nil, nil
@@ -148,6 +151,7 @@ func (h *JSONContentTypeHandler) BuildRequestBody(bodyParams map[string]any) (io
 	return bytes.NewReader(jsonBody), nil
 }
 
+// GetParameterPrefix returns the parameter prefix used for this content type.
 func (h *JSONContentTypeHandler) GetParameterPrefix() string {
 	return "" // No prefix for JSON parameters
 }
@@ -155,10 +159,12 @@ func (h *JSONContentTypeHandler) GetParameterPrefix() string {
 // XMLContentTypeHandler handles XML content types (both structured and raw)
 type XMLContentTypeHandler struct{}
 
+// GetContentTypes returns the content types supported by this handler.
 func (h *XMLContentTypeHandler) GetContentTypes() []string {
 	return []string{"application/xml", "text/xml"}
 }
 
+// ExtractParameters extracts parameters from XML schema for tool input.
 func (h *XMLContentTypeHandler) ExtractParameters(media *v3.MediaType) (map[string]ToolInputProperty, []string, error) {
 	properties := make(map[string]ToolInputProperty)
 	var required []string
@@ -203,6 +209,7 @@ func (h *XMLContentTypeHandler) ExtractParameters(media *v3.MediaType) (map[stri
 	return properties, required, nil
 }
 
+// BuildRequestBody builds an XML request body from the provided parameters.
 func (h *XMLContentTypeHandler) BuildRequestBody(bodyParams map[string]any) (io.Reader, error) {
 	if len(bodyParams) == 0 {
 		return nil, nil
@@ -226,6 +233,7 @@ func (h *XMLContentTypeHandler) BuildRequestBody(bodyParams map[string]any) (io.
 	return bytes.NewReader(jsonBody), nil
 }
 
+// GetParameterPrefix returns the parameter prefix used for this content type.
 func (h *XMLContentTypeHandler) GetParameterPrefix() string {
 	return "" // No prefix for XML parameters
 }
@@ -233,10 +241,12 @@ func (h *XMLContentTypeHandler) GetParameterPrefix() string {
 // FormURLEncodedHandler handles application/x-www-form-urlencoded
 type FormURLEncodedHandler struct{}
 
+// GetContentTypes returns the content types supported by this handler.
 func (h *FormURLEncodedHandler) GetContentTypes() []string {
 	return []string{"application/x-www-form-urlencoded"}
 }
 
+// ExtractParameters extracts parameters from form schema for tool input.
 func (h *FormURLEncodedHandler) ExtractParameters(media *v3.MediaType) (map[string]ToolInputProperty, []string, error) {
 	properties := make(map[string]ToolInputProperty)
 	var required []string
@@ -280,6 +290,7 @@ func (h *FormURLEncodedHandler) ExtractParameters(media *v3.MediaType) (map[stri
 	return properties, required, nil
 }
 
+// BuildRequestBody builds a form-encoded request body from the provided parameters.
 func (h *FormURLEncodedHandler) BuildRequestBody(bodyParams map[string]any) (io.Reader, error) {
 	if len(bodyParams) == 0 {
 		return nil, nil
@@ -310,6 +321,7 @@ func (h *FormURLEncodedHandler) BuildRequestBody(bodyParams map[string]any) (io.
 	return strings.NewReader(encodedData), nil
 }
 
+// GetParameterPrefix returns the parameter prefix used for this content type.
 func (h *FormURLEncodedHandler) GetParameterPrefix() string {
 	return "form__"
 }
@@ -317,10 +329,12 @@ func (h *FormURLEncodedHandler) GetParameterPrefix() string {
 // MultipartFormDataHandler handles multipart/form-data
 type MultipartFormDataHandler struct{}
 
+// GetContentTypes returns the content types supported by this handler.
 func (h *MultipartFormDataHandler) GetContentTypes() []string {
 	return []string{"multipart/form-data"}
 }
 
+// ExtractParameters extracts parameters from multipart form schema for tool input.
 func (h *MultipartFormDataHandler) ExtractParameters(media *v3.MediaType) (map[string]ToolInputProperty, []string, error) {
 	properties := make(map[string]ToolInputProperty)
 	var required []string
@@ -371,6 +385,7 @@ func (h *MultipartFormDataHandler) ExtractParameters(media *v3.MediaType) (map[s
 	return properties, required, nil
 }
 
+// BuildRequestBody builds a multipart form request body from the provided parameters.
 func (h *MultipartFormDataHandler) BuildRequestBody(bodyParams map[string]any) (io.Reader, error) {
 	if len(bodyParams) == 0 {
 		return nil, nil
@@ -416,6 +431,7 @@ func (h *MultipartFormDataHandler) BuildRequestBody(bodyParams map[string]any) (
 	return &body, nil
 }
 
+// GetParameterPrefix returns the parameter prefix used for this content type.
 func (h *MultipartFormDataHandler) GetParameterPrefix() string {
 	return "multipart__"
 }
@@ -423,10 +439,12 @@ func (h *MultipartFormDataHandler) GetParameterPrefix() string {
 // PlainTextHandler handles text/plain and text/* content types
 type PlainTextHandler struct{}
 
+// GetContentTypes returns the content types supported by this handler.
 func (h *PlainTextHandler) GetContentTypes() []string {
 	return []string{"text/plain", "text/*"}
 }
 
+// ExtractParameters extracts parameters from plain text schema for tool input.
 func (h *PlainTextHandler) ExtractParameters(media *v3.MediaType) (map[string]ToolInputProperty, []string, error) {
 	properties := make(map[string]ToolInputProperty)
 	var required []string
@@ -442,6 +460,7 @@ func (h *PlainTextHandler) ExtractParameters(media *v3.MediaType) (map[string]To
 	return properties, required, nil
 }
 
+// BuildRequestBody builds a plain text request body from the provided parameters.
 func (h *PlainTextHandler) BuildRequestBody(bodyParams map[string]any) (io.Reader, error) {
 	if len(bodyParams) == 0 {
 		return nil, nil
@@ -457,6 +476,7 @@ func (h *PlainTextHandler) BuildRequestBody(bodyParams map[string]any) (io.Reade
 	return nil, fmt.Errorf("plain text content type requires a 'body' parameter")
 }
 
+// GetParameterPrefix returns the parameter prefix used for this content type.
 func (h *PlainTextHandler) GetParameterPrefix() string {
 	return "" // No prefix for plain text
 }
