@@ -72,8 +72,20 @@ func createTestTool(requestBody string) (*OpenAPIMcpTool, error) {
 		return nil, nil
 	}
 
+	// Determine content type from the operation's request body
+	contentType := "application/json" // default
+	if operation.RequestBody != nil && operation.RequestBody.Content != nil {
+		// Use the first available content type
+		contentType = operation.RequestBody.Content.First().Key()
+	}
+
 	tool := &OpenAPIMcpTool{
 		Operation: operation,
+		OpenAPIHandlerInput: &OpenAPIHandlerInput{
+			Method:      "POST",
+			Path:        "/test",
+			ContentType: contentType,
+		},
 	}
 	return tool, nil
 }
@@ -326,6 +338,11 @@ paths:
 	// Create tool wrapper
 	tool := &OpenAPIMcpTool{
 		Operation: operation,
+		OpenAPIHandlerInput: &OpenAPIHandlerInput{
+			Method:      "GET",
+			Path:        "/test",
+			ContentType: "application/json",
+		},
 	}
 
 	// Extract properties
@@ -361,6 +378,11 @@ func TestExtractRequestBodyProperties_EmptySchema(t *testing.T) {
 	// Create tool wrapper
 	tool := &OpenAPIMcpTool{
 		Operation: operation,
+		OpenAPIHandlerInput: &OpenAPIHandlerInput{
+			Method:      "POST",
+			Path:        "/test",
+			ContentType: "application/json",
+		},
 	}
 
 	// Extract properties

@@ -265,7 +265,7 @@ func TestExtractRequestBodyProperties_WithRefs(t *testing.T) {
 				}
 
 				if actualProp.Description != expectedProp.Description {
-					t.Errorf("Property %s: expected description %s, got %s", propName, expectedProp.Description, actualProp.Description)
+					t.Errorf("Property '%s': expected description '%s', got '%s'", propName, expectedProp.Description, actualProp.Description)
 				}
 
 				if actualProp.Location != expectedProp.Location {

@@ -456,7 +456,7 @@ func generateSampleResponse(samples *strings.Builder, operation *v3.Operation) e
 			response := statusPairs.Value()
 			if response != nil && response.Content != nil {
 				fmt.Fprintf(samples, "Sample Response (%d):\n", statusCode)
-				for contentType, mediaType := range operation.RequestBody.Content.FromNewest() {
+				for contentType, mediaType := range response.Content.FromNewest() {
 					if mediaType.Schema == nil {
 						continue
 					}

@@ -72,8 +72,20 @@ func createTestToolSpecialTypes(requestBody string) (*OpenAPIMcpTool, error) {
 		return nil, nil
 	}
 
+	// Determine content type from the operation's request body
+	contentType := "application/json" // default
+	if operation.RequestBody != nil && operation.RequestBody.Content != nil {
+		// Use the first available content type
+		contentType = operation.RequestBody.Content.First().Key()
+	}
+
 	tool := &OpenAPIMcpTool{
 		Operation: operation,
+		OpenAPIHandlerInput: &OpenAPIHandlerInput{
+			Method:      "POST",
+			Path:        "/test",
+			ContentType: contentType,
+		},
 	}
 	return tool, nil
 }
@@ -139,7 +151,7 @@ func TestExtractRequestBodyProperties_FormData(t *testing.T) {
 			expectedProps: map[string]ToolInputProperty{
 				"body": {
 					Type:        "string",
-					Description: "Form URL-encoded request body",
+					Description: "Form URL-encoded request body. ",
 					Location:    "body",
 				},
 			},
