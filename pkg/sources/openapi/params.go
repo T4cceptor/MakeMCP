@@ -26,7 +26,7 @@ import (
 
 // OpenAPIParams holds OpenAPI-specific parameters with type safety.
 type OpenAPIParams struct {
-	*core.SharedParams
+	*core.BaseAppParams
 
 	// OpenAPI-specific fields
 	Specs          string `json:"specs"`          // URL or file path to OpenAPI specification
@@ -36,9 +36,9 @@ type OpenAPIParams struct {
 }
 
 // NewOpenAPIParams creates a new OpenAPIParams with default values.
-func NewOpenAPIParams(sharedParams *core.SharedParams) *OpenAPIParams {
+func NewOpenAPIParams(sharedParams *core.BaseAppParams) *OpenAPIParams {
 	return &OpenAPIParams{
-		SharedParams:   sharedParams,
+		BaseAppParams:  sharedParams,
 		Specs:          "",
 		BaseURL:        "",
 		Timeout:        30, // default 30 seconds
@@ -47,8 +47,8 @@ func NewOpenAPIParams(sharedParams *core.SharedParams) *OpenAPIParams {
 }
 
 // GetSharedParams returns the shared parameters.
-func (p *OpenAPIParams) GetSharedParams() *core.SharedParams {
-	return p.SharedParams
+func (p *OpenAPIParams) GetSharedParams() *core.BaseAppParams {
+	return p.BaseAppParams
 }
 
 // GetSourceType returns the source type identifier.

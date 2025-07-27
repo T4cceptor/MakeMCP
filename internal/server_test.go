@@ -23,7 +23,6 @@ import (
 
 	core "github.com/T4cceptor/MakeMCP/pkg/core"
 	"github.com/T4cceptor/MakeMCP/pkg/sources/openapi"
-	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
 )
 
@@ -190,8 +189,8 @@ func TestStartServerWithFactory(t *testing.T) {
 		app := &core.MakeMCPApp{
 			Name:    "HTTP Test Server",
 			Version: "1.0.0",
-			SourceParams: &openapi.OpenAPIParams{
-				SharedParams: &core.SharedParams{
+			AppParams: &openapi.OpenAPIParams{
+				BaseAppParams: &core.BaseAppParams{
 					Transport:  core.TransportTypeHTTP,
 					Port:       "8080",
 					SourceType: "openapi",
@@ -223,8 +222,8 @@ func TestStartServerWithFactory(t *testing.T) {
 		app := &core.MakeMCPApp{
 			Name:    "HTTP Test Server",
 			Version: "1.0.0",
-			SourceParams: &openapi.OpenAPIParams{
-				SharedParams: &core.SharedParams{
+			AppParams: &openapi.OpenAPIParams{
+				BaseAppParams: &core.BaseAppParams{
 					Transport:  core.TransportTypeHTTP,
 					Port:       "8080",
 					SourceType: "openapi",
@@ -256,8 +255,8 @@ func TestStartServerWithFactory(t *testing.T) {
 		app := &core.MakeMCPApp{
 			Name:    "Stdio Test Server",
 			Version: "1.0.0",
-			SourceParams: &openapi.OpenAPIParams{
-				SharedParams: &core.SharedParams{
+			AppParams: &openapi.OpenAPIParams{
+				BaseAppParams: &core.BaseAppParams{
 					Transport:  core.TransportTypeStdio,
 					Port:       "8080", // Should be ignored for stdio
 					SourceType: "openapi",
@@ -289,8 +288,8 @@ func TestStartServerWithFactory(t *testing.T) {
 		app := &core.MakeMCPApp{
 			Name:    "Stdio Test Server",
 			Version: "1.0.0",
-			SourceParams: &openapi.OpenAPIParams{
-				SharedParams: &core.SharedParams{
+			AppParams: &openapi.OpenAPIParams{
+				BaseAppParams: &core.BaseAppParams{
 					Transport:  core.TransportTypeStdio,
 					SourceType: "openapi",
 				},
@@ -321,8 +320,8 @@ func TestStartServerWithFactory(t *testing.T) {
 		app := &core.MakeMCPApp{
 			Name:    "Invalid Transport Server",
 			Version: "1.0.0",
-			SourceParams: &openapi.OpenAPIParams{
-				SharedParams: &core.SharedParams{
+			AppParams: &openapi.OpenAPIParams{
+				BaseAppParams: &core.BaseAppParams{
 					Transport:  "invalid",
 					Port:       "8080",
 					SourceType: "openapi",
@@ -357,8 +356,8 @@ func TestStartServer(t *testing.T) {
 		app := &core.MakeMCPApp{
 			Name:    "Test Server",
 			Version: "1.0.0",
-			SourceParams: &openapi.OpenAPIParams{
-				SharedParams: &core.SharedParams{
+			AppParams: &openapi.OpenAPIParams{
+				BaseAppParams: &core.BaseAppParams{
 					Transport:  "invalid",
 					Port:       "8080",
 					SourceType: "openapi",
@@ -442,9 +441,9 @@ func (m *mockMakeMCPTool) GetName() string {
 	return "mock_tool"
 }
 
-func (m *mockMakeMCPTool) GetHandler() func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-		return mcp.NewToolResultText("mock response"), nil
+func (m *mockMakeMCPTool) GetHandler() core.MakeMcpToolHandler {
+	return func(ctx context.Context, request core.ToolExecutionContext) (core.ToolExecutionResult, error) {
+		return core.NewBasicExecutionResult("mock response", nil), nil
 	}
 }
 

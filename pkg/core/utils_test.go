@@ -18,30 +18,28 @@ import (
 	"context"
 	"encoding/json"
 	"testing"
-
-	"github.com/mark3labs/mcp-go/mcp"
 )
 
-// testSourceParams implements SourceParams for testing.
-type testSourceParams struct {
-	sharedParams *SharedParams
+// testAppParams implements AppParams for testing.
+type testAppParams struct {
+	sharedParams *BaseAppParams
 	CustomField  string `json:"customField"`
 }
 
-func (t *testSourceParams) GetSharedParams() *SharedParams {
+func (t *testAppParams) GetSharedParams() *BaseAppParams {
 	return t.sharedParams
 }
 
-func (t *testSourceParams) Validate() error {
+func (t *testAppParams) Validate() error {
 	return nil
 }
 
-func (t *testSourceParams) ToJSON() string {
+func (t *testAppParams) ToJSON() string {
 	data, _ := json.Marshal(t)
 	return string(data)
 }
 
-func (t *testSourceParams) GetSourceType() string {
+func (t *testAppParams) GetSourceType() string {
 	return "test"
 }
 
@@ -55,9 +53,9 @@ func (t *testTool) GetName() string {
 	return t.Name
 }
 
-func (t *testTool) GetHandler() func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-		return &mcp.CallToolResult{}, nil
+func (t *testTool) GetHandler() MakeMcpToolHandler {
+	return func(ctx context.Context, request ToolExecutionContext) (ToolExecutionResult, error) {
+		return NewBasicExecutionResult("test response", nil), nil
 	}
 }
 
@@ -160,7 +158,7 @@ func TestUnmarshalConfigWithTypedParams_Success(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			app, err := UnmarshalConfigWithTypedParams[*testTool, *testSourceParams]([]byte(tt.jsonData))
+			app, err := UnmarshalConfigWithTypedParams[*testTool, *testAppParams]([]byte(tt.jsonData))
 			if err != nil {
 				t.Errorf("UnmarshalConfigWithTypedParams() error = %v", err)
 				return
@@ -195,11 +193,11 @@ func TestUnmarshalConfigWithTypedParams_Success(t *testing.T) {
 			}
 
 			// Verify source params are correctly set
-			if app.SourceParams == nil {
-				t.Error("App.SourceParams is nil")
-			} else if app.SourceParams.GetSourceType() != tt.wantSource {
-				t.Errorf("App.SourceParams.GetSourceType() = %v, want %v",
-					app.SourceParams.GetSourceType(), tt.wantSource)
+			if app.AppParams == nil {
+				t.Error("App.AppParams is nil")
+			} else if app.AppParams.GetSourceType() != tt.wantSource {
+				t.Errorf("App.AppParams.GetSourceType() = %v, want %v",
+					app.AppParams.GetSourceType(), tt.wantSource)
 			}
 		})
 	}
@@ -240,7 +238,7 @@ func TestUnmarshalConfigWithTypedParams_InvalidJSON(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := UnmarshalConfigWithTypedParams[*testTool, *testSourceParams]([]byte(tt.jsonData))
+			_, err := UnmarshalConfigWithTypedParams[*testTool, *testAppParams]([]byte(tt.jsonData))
 			if (err != nil) != tt.wantErr {
 				t.Errorf("UnmarshalConfigWithTypedParams() error = %v, wantErr %v", err, tt.wantErr)
 			}
@@ -312,7 +310,7 @@ func TestUnmarshalConfigWithTypedParams_MissingFields(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			app, err := UnmarshalConfigWithTypedParams[*testTool, *testSourceParams]([]byte(tt.jsonData))
+			app, err := UnmarshalConfigWithTypedParams[*testTool, *testAppParams]([]byte(tt.jsonData))
 			if err != nil {
 				t.Errorf("UnmarshalConfigWithTypedParams() unexpected error = %v", err)
 				return
@@ -350,7 +348,7 @@ func TestUnmarshalConfigWithTypedParams_TypeConversion(t *testing.T) {
 		}
 	}`
 
-	app, err := UnmarshalConfigWithTypedParams[*testTool, *testSourceParams]([]byte(jsonData))
+	app, err := UnmarshalConfigWithTypedParams[*testTool, *testAppParams]([]byte(jsonData))
 	if err != nil {
 		t.Fatalf("UnmarshalConfigWithTypedParams() error = %v", err)
 	}
@@ -372,19 +370,19 @@ func TestUnmarshalConfigWithTypedParams_TypeConversion(t *testing.T) {
 	}
 
 	// Test source params type conversion
-	sourceParams := app.SourceParams
-	if sourceParams == nil {
-		t.Fatal("SourceParams is nil")
+	appParams := app.AppParams
+	if appParams == nil {
+		t.Fatal("AppParams is nil")
 	}
 
-	if sourceParams.GetSourceType() != "test" {
-		t.Errorf("SourceType = %v, want 'test'", sourceParams.GetSourceType())
+	if appParams.GetSourceType() != "test" {
+		t.Errorf("SourceType = %v, want 'test'", appParams.GetSourceType())
 	}
 
 	// Type assert to check the concrete type
-	typedParams, ok := sourceParams.(*testSourceParams)
+	typedParams, ok := appParams.(*testAppParams)
 	if !ok {
-		t.Errorf("SourceParams is not *testSourceParams, got %T", sourceParams)
+		t.Errorf("AppParams is not *testAppParams, got %T", appParams)
 	} else if typedParams.CustomField != "type-value" {
 		t.Errorf("CustomField = %v, want 'type-value'", typedParams.CustomField)
 	}

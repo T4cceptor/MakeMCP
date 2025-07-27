@@ -24,17 +24,17 @@ type MakeMCPSource interface {
 	// Name returns the name of the source type
 	Name() string
 
+	// GetCommand returns the CLI command for this source
+	GetCommand() *cli.Command
+
 	// ParseParams converts raw CLI input into typed source-specific parameters
-	ParseParams(input *core.CLIParamsInput) (core.SourceParams, error)
+	ParseParams(input *core.CLIParamsInput) (core.AppParams, error)
 
 	// Parse creates a MakeMCPApp configuration from typed parameters (Step 1: no handlers)
-	Parse(params core.SourceParams) (*core.MakeMCPApp, error)
+	Parse(params core.AppParams) (*core.MakeMCPApp, error)
 
 	// AttachToolHandlers adds tool handler functions to an existing MakeMCPApp (Step 2: ready to serve)
 	AttachToolHandlers(app *core.MakeMCPApp) error
 
 	UnmarshalConfig(data []byte) (*core.MakeMCPApp, error)
-
-	// GetCommand returns the CLI command for this source
-	GetCommand() *cli.Command
 }

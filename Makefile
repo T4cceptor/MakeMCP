@@ -1,7 +1,7 @@
 # Build variables
 BINARY_NAME=makemcp
 BUILD_DIR=build
-MAIN_PATH=./cmd/makemcp.go
+MAIN_PATH=./cmd/main.go
 
 # Version info (can be overridden)
 VERSION ?= dev

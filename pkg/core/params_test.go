@@ -59,7 +59,7 @@ func TestNewSharedParams(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			params := NewSharedParams(tt.sourceType, tt.transport)
+			params := NewBaseParams(tt.sourceType, tt.transport)
 
 			if params.SourceType != tt.wantType {
 				t.Errorf("NewSharedParams().SourceType = %v, want %v", params.SourceType, tt.wantType)
@@ -85,67 +85,6 @@ func TestNewSharedParams(t *testing.T) {
 	}
 }
 
-func TestSharedParams_ToJSON(t *testing.T) {
-	tests := []struct {
-		name   string
-		params SharedParams
-	}{
-		{
-			name: "complete params",
-			params: SharedParams{
-				Transport:  TransportTypeHTTP,
-				ConfigOnly: true,
-				Port:       "9090",
-				DevMode:    true,
-				SourceType: "openapi",
-				File:       "custom",
-			},
-		},
-		{
-			name: "default params",
-			params: SharedParams{
-				Transport:  TransportTypeStdio,
-				ConfigOnly: false,
-				Port:       "8080",
-				DevMode:    false,
-				SourceType: "test",
-				File:       "makemcp",
-			},
-		},
-		{
-			name: "minimal params",
-			params: SharedParams{
-				Transport:  TransportTypeStdio,
-				SourceType: "minimal",
-			},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			jsonStr := tt.params.ToJSON()
-
-			// Verify it's valid JSON
-			var result map[string]any
-			if err := json.Unmarshal([]byte(jsonStr), &result); err != nil {
-				t.Errorf("ToJSON() returned invalid JSON: %v", err)
-				return
-			}
-
-			// Verify key fields are present
-			if result["transport"] != string(tt.params.Transport) {
-				t.Errorf("JSON transport = %v, want %v", result["transport"], tt.params.Transport)
-			}
-			if result["sourceType"] != tt.params.SourceType {
-				t.Errorf("JSON sourceType = %v, want %v", result["sourceType"], tt.params.SourceType)
-			}
-			if result["configOnly"] != tt.params.ConfigOnly {
-				t.Errorf("JSON configOnly = %v, want %v", result["configOnly"], tt.params.ConfigOnly)
-			}
-		})
-	}
-}
-
 func TestCLIParamsInput_ToJSON(t *testing.T) {
 	tests := []struct {
 		name  string
@@ -154,7 +93,7 @@ func TestCLIParamsInput_ToJSON(t *testing.T) {
 		{
 			name: "complete input",
 			input: CLIParamsInput{
-				SharedParams: &SharedParams{
+				SharedParams: &BaseAppParams{
 					Transport:  TransportTypeHTTP,
 					ConfigOnly: false,
 					Port:       "8080",
@@ -173,7 +112,7 @@ func TestCLIParamsInput_ToJSON(t *testing.T) {
 		{
 			name: "minimal input",
 			input: CLIParamsInput{
-				SharedParams: &SharedParams{
+				SharedParams: &BaseAppParams{
 					Transport:  TransportTypeStdio,
 					SourceType: "test",
 				},
@@ -235,7 +174,7 @@ func TestCLIParamsInput_ToJSON(t *testing.T) {
 }
 
 func TestSharedParams_JSONRoundTrip(t *testing.T) {
-	original := SharedParams{
+	original := BaseAppParams{
 		Transport:  TransportTypeHTTP,
 		ConfigOnly: true,
 		Port:       "9090",
@@ -251,7 +190,7 @@ func TestSharedParams_JSONRoundTrip(t *testing.T) {
 	}
 
 	// Unmarshal from JSON
-	var unmarshaled SharedParams
+	var unmarshaled BaseAppParams
 	if err := json.Unmarshal(data, &unmarshaled); err != nil {
 		t.Fatalf("Failed to unmarshal SharedParams: %v", err)
 	}
@@ -279,7 +218,7 @@ func TestSharedParams_JSONRoundTrip(t *testing.T) {
 
 func TestCLIParamsInput_JSONRoundTrip(t *testing.T) {
 	original := CLIParamsInput{
-		SharedParams: &SharedParams{
+		SharedParams: &BaseAppParams{
 			Transport:  TransportTypeStdio,
 			ConfigOnly: false,
 			Port:       "8080",

@@ -30,7 +30,7 @@ import (
 // The filename is derived from the file parameter or defaults to app name (e.g., "makemcp.json")
 func SaveToFile(app *core.MakeMCPApp) error {
 	var filename string
-	sharedParams := app.SourceParams.GetSharedParams()
+	sharedParams := app.AppParams.GetSharedParams()
 	if sharedParams.File != "" {
 		filename = fmt.Sprintf("%s.json", sharedParams.File)
 	} else {

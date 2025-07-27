@@ -16,6 +16,9 @@ const (
 	ParameterLocationBody ParameterLocation = "body"
 )
 
+// ParameterLocations are all available parameter locations as a list
+var ParameterLocations []ParameterLocation = []ParameterLocation{ParameterLocationPath, ParameterLocationQuery, ParameterLocationHeader, ParameterLocationCookie}
+
 // IsValid returns true if the parameter location is valid.
 func (p ParameterLocation) IsValid() bool {
 	switch p {

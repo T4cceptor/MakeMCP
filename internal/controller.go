@@ -96,7 +96,7 @@ func GetInputConfig(source sources.MakeMCPSource, cmd *cli.Command) *core.CLIPar
 	}
 	cliArgs := cmd.Args().Slice()
 
-	sharedParams := core.NewSharedParams(
+	sharedParams := core.NewBaseParams(
 		source.Name(),
 		core.TransportType(cmd.String("transport")),
 	)
@@ -117,13 +117,13 @@ func HandleInput(source sources.MakeMCPSource, inputParams *core.CLIParamsInput)
 	log.Printf("Creating config from %s source with params: %s", source.Name(), inputParams.ToJSON())
 
 	// Parse raw input into typed source parameters
-	sourceParams, err := source.ParseParams(inputParams)
+	appParams, err := source.ParseParams(inputParams)
 	if err != nil {
 		return fmt.Errorf("failed to parse %s source parameters: %w", source.Name(), err)
 	}
 
 	// Parse with the source to create MakeMCPApp
-	app, err := source.Parse(sourceParams)
+	app, err := source.Parse(appParams)
 	if err != nil {
 		return fmt.Errorf("failed to parse with %s source: %w", source.Name(), err)
 	}
@@ -134,7 +134,7 @@ func HandleInput(source sources.MakeMCPSource, inputParams *core.CLIParamsInput)
 	}
 
 	// Exit if config-only mode
-	if sourceParams.GetSharedParams().ConfigOnly {
+	if appParams.GetSharedParams().ConfigOnly {
 		log.Println("Configuration file created. Exiting.")
 		return nil
 	}
