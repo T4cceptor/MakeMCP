@@ -164,10 +164,23 @@ func (a *LibopenAPIAdapter) CreateToolsFromDocument(doc *libopenapi.DocumentMode
 
 // createToolFromOperation creates a MakeMCPTool from an OpenAPI operation
 func (a *LibopenAPIAdapter) createToolFromOperation(method, path string, operation *v3.Operation) OpenAPIMcpTool {
-	toolName := a.getToolName(method, path, operation)
-	toolInputSchema := a.getToolInputSchema(operation)
-	toolAnnotations := a.getToolAnnotations(method, path, operation)
+	contentType, _ := a.determineContentType(operation)
+	var resultTool OpenAPIMcpTool = OpenAPIMcpTool{
+		Operation: operation,
+		OpenAPIHandlerInput: &OpenAPIHandlerInput{
+			Method:      method,
+			Path:        path,
+			Headers:     make(map[string]string),
+			Cookies:     make(map[string]string),
+			BodyAppend:  make(map[string]any),
+			ContentType: contentType,
+		},
+	}
+	resultTool.Name = a.getToolName(&resultTool)
+	resultTool.InputSchema = a.getToolInputSchema(&resultTool)
+	resultTool.Annotations = a.getToolAnnotations(&resultTool)
 
+	// TODO: add proper "GetToolDescription" function which handles everything related to tool description
 	// Create tool description
 	description := operation.Description
 	if description == "" {
@@ -176,67 +189,49 @@ func (a *LibopenAPIAdapter) createToolFromOperation(method, path string, operati
 	if description == "" {
 		description = fmt.Sprintf("%s %s", strings.ToUpper(method), path)
 	}
-
 	// Add schema documentation for non-JSON request bodies
-	bodySchemaDoc := a.extractRequestBodySchemaDoc(operation)
+	bodySchemaDoc := a.extractRequestBodySchemaDoc(&resultTool)
 	if bodySchemaDoc != "" {
 		description = description + "\n\n" + bodySchemaDoc
 	}
-
 	// Generate samples for better AI understanding
 	samples, err := a.generateToolSamples(operation, method, path)
 	if err == nil && samples != "" {
 		description = description + "\n\n" + samples
 	}
-
-	// Create the tool
-	tool := OpenAPIMcpTool{
-		McpTool: core.McpTool{
-			Name:        toolName,
-			Description: description,
-			InputSchema: toolInputSchema,
-			Annotations: toolAnnotations,
-		},
-		OpenAPIHandlerInput: &OpenAPIHandlerInput{
-			Method:      method,
-			Path:        path,
-			Headers:     make(map[string]string),
-			Cookies:     make(map[string]string),
-			BodyAppend:  make(map[string]any),
-			ContentType: a.determineContentType(operation),
-		},
-	}
-
-	return tool
+	resultTool.Description = description
+	return resultTool
 }
 
 // getToolName generates a tool name from operation ID or method and path.
-func (a *LibopenAPIAdapter) getToolName(method string, path string, operation *v3.Operation) string {
-	toolName := operation.OperationId
+func (a *LibopenAPIAdapter) getToolName(tool *OpenAPIMcpTool) string {
+	toolName := tool.Operation.OperationId
 	if toolName == "" {
-		toolName = fmt.Sprintf("%s_%s", method, path)
+		toolName = fmt.Sprintf("%s_%s", tool.OpenAPIHandlerInput.Method, tool.OpenAPIHandlerInput.Path)
 	}
 
 	// Clean up the tool name by removing invalid characters
 	replacer := strings.NewReplacer(
+		// TODO: check for other illegal chars in tool names
 		"{", "",
 		"}", "",
 		"/", "_",
 		"-", "_",
 	)
 	toolName = strings.ToLower(replacer.Replace(toolName))
+	// TODO check tool name convention!
 
 	return toolName
 }
 
 // getToolInputSchema creates the input schema for a tool.
-func (a *LibopenAPIAdapter) getToolInputSchema(operation *v3.Operation) core.McpToolInputSchema {
+func (a *LibopenAPIAdapter) getToolInputSchema(tool *OpenAPIMcpTool) core.McpToolInputSchema {
 	genericProps := make(map[string]any)
 	var required []string
 
 	// Extract path, query, header, and cookie parameters
-	for _, in := range []ParameterLocation{ParameterLocationPath, ParameterLocationQuery, ParameterLocationHeader, ParameterLocationCookie} {
-		props, reqs := a.extractParametersByIn(operation, in)
+	for _, in := range ParameterLocations {
+		props, reqs := a.extractParametersByIn(tool, in)
 		for paramName, prop := range props {
 			prefixedName := fmt.Sprintf("%s__%s", in, paramName)
 			genericProps[prefixedName] = map[string]any{
@@ -250,7 +245,7 @@ func (a *LibopenAPIAdapter) getToolInputSchema(operation *v3.Operation) core.Mcp
 	}
 
 	// Extract request body properties
-	bodyProps, bodyReqs := a.extractRequestBodyProperties(operation)
+	bodyProps, bodyReqs := a.extractRequestBodyProperties(tool)
 	for paramName, prop := range bodyProps {
 		prefixedName := fmt.Sprintf("body__%s", paramName)
 		genericProps[prefixedName] = map[string]any{
@@ -270,16 +265,9 @@ func (a *LibopenAPIAdapter) getToolInputSchema(operation *v3.Operation) core.Mcp
 }
 
 // getToolAnnotations returns tool annotations based on HTTP method and operation.
-func (a *LibopenAPIAdapter) getToolAnnotations(method string, path string, operation *v3.Operation) core.McpToolAnnotation {
-	annotation := core.McpToolAnnotation{
-		Title:           a.getToolName(method, path, operation),
-		ReadOnlyHint:    nil,
-		DestructiveHint: nil,
-		IdempotentHint:  nil,
-		OpenWorldHint:   nil,
-	}
-
-	switch methodUpper := strings.ToUpper(method); methodUpper {
+func (a *LibopenAPIAdapter) getToolAnnotations(tool *OpenAPIMcpTool) core.McpToolAnnotation {
+	annotation := core.McpToolAnnotation{Title: tool.Name}
+	switch methodUpper := strings.ToUpper(tool.OpenAPIHandlerInput.Method); methodUpper {
 	case "GET", "HEAD", "OPTIONS":
 		// ReadOnlyHint: GET, HEAD, OPTIONS are considered read-only and idempotent
 		annotation.ReadOnlyHint = boolPtr(true)
@@ -294,7 +282,6 @@ func (a *LibopenAPIAdapter) getToolAnnotations(method string, path string, opera
 		// IdempotentHint: POST is not idempotent
 		annotation.IdempotentHint = boolPtr(false)
 	}
-
 	return annotation
 }
 
@@ -310,7 +297,8 @@ func GetSchemaTypeString(schemaProxy *base.SchemaProxy) string {
 }
 
 // extractParametersByIn extracts parameters of a given 'in' type from an operation
-func (a *LibopenAPIAdapter) extractParametersByIn(operation *v3.Operation, in ParameterLocation) (map[string]ToolInputProperty, []string) {
+func (a *LibopenAPIAdapter) extractParametersByIn(tool *OpenAPIMcpTool, in ParameterLocation) (map[string]ToolInputProperty, []string) {
+	operation := tool.Operation
 	properties := make(map[string]ToolInputProperty)
 	var required []string
 
@@ -351,10 +339,7 @@ func (a *LibopenAPIAdapter) generateSchemaDocumentation(schemaProxy *base.Schema
 	var doc strings.Builder
 	doc.WriteString(fmt.Sprintf("Expected %s structure:\n", contentType))
 
-	for propPairs := schema.Properties.First(); propPairs != nil; propPairs = propPairs.Next() {
-		propName := propPairs.Key()
-		propSchemaProxy := propPairs.Value()
-
+	for propName, propSchemaProxy := range schema.Properties.FromNewest() {
 		required := ""
 		if contains(schema.Required, propName) {
 			required = " (required)"
@@ -372,95 +357,65 @@ func (a *LibopenAPIAdapter) generateSchemaDocumentation(schemaProxy *base.Schema
 }
 
 // determineContentType returns the preferred content type for an operation's request body
-func (a *LibopenAPIAdapter) determineContentType(operation *v3.Operation) string {
-	if operation.RequestBody == nil {
-		return ""
+func (a *LibopenAPIAdapter) determineContentType(operation *v3.Operation) (string, *v3.MediaType) {
+	if operation.RequestBody == nil || operation.RequestBody.Content == nil {
+		return "", nil
 	}
 
 	// Priority order for content types
-	contentTypes := []string{"application/json", "*/*", "text/xml", "application/xml", "text/plain"}
-
-	for _, contentType := range contentTypes {
-		if operation.RequestBody.Content != nil {
-			for contentPairs := operation.RequestBody.Content.First(); contentPairs != nil; contentPairs = contentPairs.Next() {
-				if contentPairs.Key() == contentType {
-					return contentType
-				}
+	contentTypes := a.contentTypeRegistry.GetAllContentTypes()
+	// TODO: check if the order of content types is correct
+	for _, expectedContentType := range contentTypes {
+		for actualContentType, media := range operation.RequestBody.Content.FromNewest() {
+			if expectedContentType == actualContentType {
+				return actualContentType, media
 			}
 		}
 	}
 
 	// Return first available content type if no priority match
-	if operation.RequestBody.Content != nil {
-		for contentPairs := operation.RequestBody.Content.First(); contentPairs != nil; contentPairs = contentPairs.Next() {
-			return contentPairs.Key()
-		}
-	}
-
-	return ""
+	return operation.RequestBody.Content.First().Key(), operation.RequestBody.Content.First().Value()
 }
 
 // extractRequestBodySchemaDoc extracts schema documentation for non-JSON content types
-func (a *LibopenAPIAdapter) extractRequestBodySchemaDoc(operation *v3.Operation) string {
-	if operation.RequestBody == nil {
+func (a *LibopenAPIAdapter) extractRequestBodySchemaDoc(tool *OpenAPIMcpTool) string {
+	if !hasRequestBody(tool.Operation) {
 		return ""
 	}
-
 	// Check for non-JSON content types that need schema documentation
 	nonJSONContentTypes := []string{"text/xml", "application/xml", "text/plain"}
-
-	for _, contentType := range nonJSONContentTypes {
-		if operation.RequestBody.Content != nil {
-			for contentPairs := operation.RequestBody.Content.First(); contentPairs != nil; contentPairs = contentPairs.Next() {
-				if contentPairs.Key() == contentType {
-					media := contentPairs.Value()
-					if media.Schema != nil {
-						return a.generateSchemaDocumentation(media.Schema, contentType)
-					}
-				}
-			}
+	contentType := tool.OpenAPIHandlerInput.ContentType
+	if slices.Contains(nonJSONContentTypes, contentType) {
+		content, ok := tool.Operation.RequestBody.Content.Get(contentType)
+		if ok {
+			return a.generateSchemaDocumentation(content.Schema, contentType)
 		}
 	}
+	return "" // in case no content type matches
+}
 
-	return ""
+func hasRequestBody(operation *v3.Operation) bool {
+	return operation.RequestBody != nil && operation.RequestBody.Content != nil
 }
 
 // extractRequestBodyProperties extracts properties from the request body schema
-func (a *LibopenAPIAdapter) extractRequestBodyProperties(operation *v3.Operation) (map[string]ToolInputProperty, []string) {
-	properties := make(map[string]ToolInputProperty)
-	var required []string
-
-	if operation.RequestBody == nil {
-		return properties, required
+func (a *LibopenAPIAdapter) extractRequestBodyProperties(tool *OpenAPIMcpTool) (map[string]ToolInputProperty, []string) {
+	if !hasRequestBody(tool.Operation) {
+		return make(map[string]ToolInputProperty), []string{}
 	}
-
-	// Check for supported content types in priority order
-	contentTypes := []string{"application/json", "*/*", "text/xml", "application/xml"}
-
-	for _, contentType := range contentTypes {
-		if operation.RequestBody.Content != nil {
-			for contentPairs := operation.RequestBody.Content.First(); contentPairs != nil; contentPairs = contentPairs.Next() {
-				if contentPairs.Key() == contentType {
-					return a.extractPropertiesFromMedia(contentPairs.Value(), contentType)
-				}
-			}
-		}
+	contentType := tool.OpenAPIHandlerInput.ContentType
+	contentMedia, ok := tool.Operation.RequestBody.Content.Get(contentType)
+	if !ok {
+		// If no recognized content type found, try the first available one
+		contentPairs := tool.Operation.RequestBody.Content.First()
+		return a.extractPropertiesFromMedia(contentPairs.Value(), contentPairs.Key())
 	}
-
-	// If no recognized content type found, try the first available one
-	if operation.RequestBody.Content != nil {
-		for contentPairs := operation.RequestBody.Content.First(); contentPairs != nil; contentPairs = contentPairs.Next() {
-			return a.extractPropertiesFromMedia(contentPairs.Value(), contentPairs.Key())
-		}
-	}
-
-	return properties, required
+	return a.extractPropertiesFromMedia(contentMedia, contentType)
 }
 
 // extractPropertiesFromMedia extracts properties from a media type using content-type specific handlers
 func (a *LibopenAPIAdapter) extractPropertiesFromMedia(media *v3.MediaType, contentType string) (map[string]ToolInputProperty, []string) {
 	handler := a.contentTypeRegistry.GetHandler(contentType)
-
 	properties, required, err := handler.ExtractParameters(media)
 	if err != nil {
 		// Log error and fall back to empty properties
@@ -468,27 +423,25 @@ func (a *LibopenAPIAdapter) extractPropertiesFromMedia(media *v3.MediaType, cont
 		log.Printf("Error extracting parameters for content type %s: %v", contentType, err)
 		return make(map[string]ToolInputProperty), []string{}
 	}
-
 	return properties, required
 }
 
 func generateSampleRequest(samples *strings.Builder, operation *v3.Operation) error {
 	samples.WriteString("Sample Request:\n")
-	for contentPairs := operation.RequestBody.Content.First(); contentPairs != nil; contentPairs = contentPairs.Next() {
-		contentType := contentPairs.Key()
-		mediaType := contentPairs.Value()
-		if mediaType.Schema != nil {
-			mockGen := renderer.NewMockGenerator(renderer.JSON)
-			mockGen.SetPretty()
-			mockGen.DisableRequiredCheck() // Show all properties, not just required ones
-			sample, err := mockGen.GenerateMock(mediaType.Schema.Schema(), "")
-			if err == nil {
-				fmt.Fprintf(samples, "Content-Type: %s\n", contentType)
-				fmt.Fprintf(samples, "```json\n%s\n```\n\n", string(sample))
-				break // Only show one sample request
-			} else {
-				return err
-			}
+	for contentType, mediaType := range operation.RequestBody.Content.FromNewest() {
+		if mediaType.Schema == nil {
+			continue
+		}
+		mockGen := renderer.NewMockGenerator(renderer.JSON)
+		mockGen.SetPretty()
+		mockGen.DisableRequiredCheck() // Show all properties, not just required ones
+		sample, err := mockGen.GenerateMock(mediaType.Schema.Schema(), "")
+		if err == nil {
+			fmt.Fprintf(samples, "Content-Type: %s\n", contentType)
+			fmt.Fprintf(samples, "```json\n%s\n```\n\n", string(sample))
+			break // Only show one sample request
+		} else {
+			return err
 		}
 	}
 	return nil
@@ -503,23 +456,20 @@ func generateSampleResponse(samples *strings.Builder, operation *v3.Operation) e
 			response := statusPairs.Value()
 			if response != nil && response.Content != nil {
 				fmt.Fprintf(samples, "Sample Response (%d):\n", statusCode)
-				for contentPairs := response.Content.First(); contentPairs != nil; contentPairs = contentPairs.Next() {
-					contentType := contentPairs.Key()
-					mediaType := contentPairs.Value()
-
-					if mediaType.Schema != nil {
-						mockGen := renderer.NewMockGenerator(renderer.JSON)
-						mockGen.SetPretty()
-						mockGen.DisableRequiredCheck() // Show all properties, including system-generated fields
-						sample, err := mockGen.GenerateMock(mediaType.Schema.Schema(), "")
-						if err == nil {
-							fmt.Fprintf(samples, "Content-Type: %s\n", contentType)
-							fmt.Fprintf(samples, "```json\n%s\n```\n\n", string(sample))
-							break // Only show one sample response
-						} else {
-							return err
-						}
+				for contentType, mediaType := range operation.RequestBody.Content.FromNewest() {
+					if mediaType.Schema == nil {
+						continue
 					}
+					mockGen := renderer.NewMockGenerator(renderer.JSON)
+					mockGen.SetPretty()
+					mockGen.DisableRequiredCheck() // Show all properties, including system-generated fields
+					sample, err := mockGen.GenerateMock(mediaType.Schema.Schema(), "")
+					if err != nil {
+						return err
+					}
+					fmt.Fprintf(samples, "Content-Type: %s\n", contentType)
+					fmt.Fprintf(samples, "```json\n%s\n```\n\n", string(sample)) // TODO: json is wrong here, should be contentType
+					break
 				}
 				break // Only show first success response
 			} else {

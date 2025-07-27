@@ -20,7 +20,6 @@ import (
 	"io"
 	"log"
 	"net/http"
-	"slices"
 	"strings"
 	"time"
 
@@ -143,12 +142,11 @@ func buildRequestURL(baseURL, path string, params ToolParams) string {
 }
 
 // buildRequestBody prepares the request body for non-GET/DELETE methods using content-type handlers.
-func buildRequestBody(params ToolParams, method, contentType string) (io.Reader, error) {
-	readOnlyMethods := []string{http.MethodGet, http.MethodDelete}
-	if len(params.Body) > 0 && !slices.Contains(readOnlyMethods, method) {
+func buildRequestBody(params ToolParams, tool *OpenAPIMcpTool) (io.Reader, error) {
+	if len(params.Body) > 0 {
 		// Use the global content type registry to handle body building
 		registry := NewContentTypeRegistry()
-		handler := registry.GetHandler(contentType)
+		handler := registry.GetHandler(tool.OpenAPIHandlerInput.ContentType)
 		return handler.BuildRequestBody(params.Body)
 	}
 	return nil, nil
@@ -222,7 +220,7 @@ func GetOpenAPIHandler(makeMcpTool *OpenAPIMcpTool, apiClient *APIClient) core.M
 
 		// Build URL and body using helper functions
 		fullURL := buildRequestURL(apiClient.BaseURL, makeMcpTool.OpenAPIHandlerInput.Path, params)
-		bodyReader, err := buildRequestBody(params, method, makeMcpTool.OpenAPIHandlerInput.ContentType)
+		bodyReader, err := buildRequestBody(params, makeMcpTool)
 		if err != nil {
 			return core.NewBasicExecutionResult("Error: ", fmt.Errorf("failed to build request body: %w", err)), nil
 		}

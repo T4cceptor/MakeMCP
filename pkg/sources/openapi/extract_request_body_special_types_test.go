@@ -16,7 +16,67 @@ package openapi
 
 import (
 	"testing"
+
+	"github.com/pb33f/libopenapi"
+	"github.com/pb33f/libopenapi/datamodel"
+	v3 "github.com/pb33f/libopenapi/datamodel/high/v3"
 )
+
+// Helper function to create a test OpenAPI document with a specific operation
+func createTestOperationSpecialTypes(requestBody string) (*v3.Operation, error) {
+	// Create a minimal OpenAPI spec with the given request body
+	spec := `
+openapi: 3.0.0
+info:
+  title: Test API
+  version: 1.0.0
+paths:
+  /test:
+    post:
+      requestBody:
+` + requestBody + `
+      responses:
+        '200':
+          description: Success
+`
+
+	config := datamodel.NewDocumentConfiguration()
+	document, err := libopenapi.NewDocumentWithConfiguration([]byte(spec), config)
+	if err != nil {
+		return nil, err
+	}
+
+	docModel, errors := document.BuildV3Model()
+	if len(errors) > 0 {
+		return nil, errors[0]
+	}
+
+	// Get the POST operation from /test path
+	for pathPairs := docModel.Model.Paths.PathItems.First(); pathPairs != nil; pathPairs = pathPairs.Next() {
+		pathItem := pathPairs.Value()
+		if pathItem.Post != nil {
+			return pathItem.Post, nil
+		}
+	}
+
+	return nil, nil
+}
+
+// Helper function to create a test OpenAPIMcpTool with a specific request body
+func createTestToolSpecialTypes(requestBody string) (*OpenAPIMcpTool, error) {
+	operation, err := createTestOperationSpecialTypes(requestBody)
+	if err != nil {
+		return nil, err
+	}
+	if operation == nil {
+		return nil, nil
+	}
+
+	tool := &OpenAPIMcpTool{
+		Operation: operation,
+	}
+	return tool, nil
+}
 
 func TestExtractRequestBodyProperties_FormData(t *testing.T) {
 	adapter := NewLibopenAPIAdapter()
@@ -90,17 +150,17 @@ func TestExtractRequestBodyProperties_FormData(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Create test operation
-			operation, err := createTestOperation(tt.requestBody)
+			// Create test tool
+			tool, err := createTestToolSpecialTypes(tt.requestBody)
 			if err != nil {
-				t.Fatalf("Failed to create test operation: %v", err)
+				t.Fatalf("Failed to create test tool: %v", err)
 			}
-			if operation == nil {
-				t.Fatal("Failed to get operation from test spec")
+			if tool == nil {
+				t.Fatal("Failed to get tool from test spec")
 			}
 
 			// Extract properties
-			props, reqs := adapter.extractRequestBodyProperties(operation)
+			props, reqs := adapter.extractRequestBodyProperties(tool)
 
 			// Verify properties count
 			if len(props) != len(tt.expectedProps) {
@@ -223,17 +283,17 @@ func TestExtractRequestBodyProperties_Multipart(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Create test operation
-			operation, err := createTestOperation(tt.requestBody)
+			// Create test tool
+			tool, err := createTestToolSpecialTypes(tt.requestBody)
 			if err != nil {
-				t.Fatalf("Failed to create test operation: %v", err)
+				t.Fatalf("Failed to create test tool: %v", err)
 			}
-			if operation == nil {
-				t.Fatal("Failed to get operation from test spec")
+			if tool == nil {
+				t.Fatal("Failed to get tool from test spec")
 			}
 
 			// Extract properties
-			props, reqs := adapter.extractRequestBodyProperties(operation)
+			props, reqs := adapter.extractRequestBodyProperties(tool)
 
 			// Verify properties count
 			if len(props) != len(tt.expectedProps) {
@@ -343,17 +403,17 @@ func TestExtractRequestBodyProperties_StructuredXML(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Create test operation
-			operation, err := createTestOperation(tt.requestBody)
+			// Create test tool
+			tool, err := createTestToolSpecialTypes(tt.requestBody)
 			if err != nil {
-				t.Fatalf("Failed to create test operation: %v", err)
+				t.Fatalf("Failed to create test tool: %v", err)
 			}
-			if operation == nil {
-				t.Fatal("Failed to get operation from test spec")
+			if tool == nil {
+				t.Fatal("Failed to get tool from test spec")
 			}
 
 			// Extract properties
-			props, reqs := adapter.extractRequestBodyProperties(operation)
+			props, reqs := adapter.extractRequestBodyProperties(tool)
 
 			// Verify properties count
 			if len(props) != len(tt.expectedProps) {

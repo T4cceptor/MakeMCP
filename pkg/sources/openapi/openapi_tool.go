@@ -2,6 +2,7 @@ package openapi
 
 import (
 	core "github.com/T4cceptor/MakeMCP/pkg/core"
+	v3 "github.com/pb33f/libopenapi/datamodel/high/v3"
 )
 
 // OpenAPIMcpTool represents an MCP tool generated from an OpenAPI operation.
@@ -10,6 +11,7 @@ type OpenAPIMcpTool struct {
 	core.McpTool
 	OpenAPIHandlerInput *OpenAPIHandlerInput    `json:"oapiHandlerInput,omitempty"`
 	handler             core.MakeMcpToolHandler `json:"-"`
+	Operation           *v3.Operation           `json:"-"`
 }
 
 // GetName returns the name of the OpenAPI MCP tool.

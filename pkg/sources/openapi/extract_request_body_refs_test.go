@@ -236,9 +236,15 @@ func TestExtractRequestBodyProperties_WithRefs(t *testing.T) {
 			if operation == nil {
 				t.Fatal("Failed to get operation from test spec")
 			}
+			tool := OpenAPIMcpTool{
+				Operation: operation,
+				OpenAPIHandlerInput: &OpenAPIHandlerInput{
+					ContentType: "*/*",
+				},
+			}
 
 			// Extract properties
-			props, reqs := adapter.extractRequestBodyProperties(operation)
+			props, reqs := adapter.extractRequestBodyProperties(&tool)
 
 			// Verify properties count
 			if len(props) != len(tt.expectedProps) {

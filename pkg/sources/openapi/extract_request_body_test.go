@@ -62,6 +62,22 @@ paths:
 	return nil, nil
 }
 
+// Helper function to create a test OpenAPIMcpTool with a specific request body
+func createTestTool(requestBody string) (*OpenAPIMcpTool, error) {
+	operation, err := createTestOperation(requestBody)
+	if err != nil {
+		return nil, err
+	}
+	if operation == nil {
+		return nil, nil
+	}
+
+	tool := &OpenAPIMcpTool{
+		Operation: operation,
+	}
+	return tool, nil
+}
+
 func TestExtractRequestBodyProperties_JSON(t *testing.T) {
 	adapter := NewLibopenAPIAdapter()
 
@@ -207,17 +223,17 @@ func TestExtractRequestBodyProperties_JSON(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Create test operation
-			operation, err := createTestOperation(tt.requestBody)
+			// Create test tool
+			tool, err := createTestTool(tt.requestBody)
 			if err != nil {
-				t.Fatalf("Failed to create test operation: %v", err)
+				t.Fatalf("Failed to create test tool: %v", err)
 			}
-			if operation == nil {
-				t.Fatal("Failed to get operation from test spec")
+			if tool == nil {
+				t.Fatal("Failed to get tool from test spec")
 			}
 
 			// Extract properties
-			props, reqs := adapter.extractRequestBodyProperties(operation)
+			props, reqs := adapter.extractRequestBodyProperties(tool)
 
 			// Verify properties count
 			if len(props) != len(tt.expectedProps) {
@@ -307,8 +323,13 @@ paths:
 		t.Fatal("Failed to get operation from test spec")
 	}
 
+	// Create tool wrapper
+	tool := &OpenAPIMcpTool{
+		Operation: operation,
+	}
+
 	// Extract properties
-	props, reqs := adapter.extractRequestBodyProperties(operation)
+	props, reqs := adapter.extractRequestBodyProperties(tool)
 
 	// Should return empty results
 	if len(props) != 0 {
@@ -337,8 +358,13 @@ func TestExtractRequestBodyProperties_EmptySchema(t *testing.T) {
 		t.Fatal("Failed to get operation from test spec")
 	}
 
+	// Create tool wrapper
+	tool := &OpenAPIMcpTool{
+		Operation: operation,
+	}
+
 	// Extract properties
-	props, reqs := adapter.extractRequestBodyProperties(operation)
+	props, reqs := adapter.extractRequestBodyProperties(tool)
 
 	// Should return empty results for schema without properties
 	if len(props) != 0 {
