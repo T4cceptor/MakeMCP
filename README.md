@@ -2,7 +2,8 @@
 
 **Transform APIs into MCP servers for AI agents**
 
-MakeMCP is a simple CLI tool that converts OpenAPI specifications into MCP (Model Context Protocol) servers. Point it at any REST API with an OpenAPI spec, and it creates a fully compliant MCP server that works with all MCP clients and tools.
+MakeMCP is a simple CLI tool that creates MCP (Model Context Protocol) servers from various sources (e.g. OpenAPI specs, CLI tools, MCP Proxying etc.).
+Point it at any REST API with an OpenAPI spec, and it creates a fully compliant MCP server that works with all MCP clients and tools.
 
 ## Key Benefits
 
