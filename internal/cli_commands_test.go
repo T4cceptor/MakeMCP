@@ -25,7 +25,8 @@ import (
 )
 
 func TestGetInternalCommands(t *testing.T) {
-	commands := GetInternalCommands()
+	flags := []cli.Flag{}
+	commands := GetInternalCommands(flags)
 
 	// Test that we get the expected number of commands
 	if len(commands) != 1 {

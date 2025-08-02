@@ -67,7 +67,7 @@ func GetCommands() []*cli.Command {
 	var commands []*cli.Command
 
 	// Add internal commands (config file management)
-	commands = append(commands, GetInternalCommands()...)
+	commands = append(commands, GetInternalCommands(defaultFlags)...)
 
 	// Auto-discover commands from registered sources
 	for _, source := range sources.SourcesRegistry.GetAll() {

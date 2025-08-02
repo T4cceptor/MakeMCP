@@ -29,10 +29,18 @@ var loadCommand cli.Command = cli.Command{
 	Description: "Loads a MakeMCP configuration file and starts the MCP server with the saved configuration.",
 	ArgsUsage:   "<config-file-path>",
 	Action:      handleLoadCommand,
+	Flags: []cli.Flag{
+		&cli.BoolFlag{
+			Name:  "overwrite-config",
+			Value: true,
+			Usage: "Determins if config is overwritten using provided cli flags. Note: only provided flags will be overwritten.",
+		},
+	},
 }
 
 // GetInternalCommands returns all CLI commands related to MakeMCP config file management.
-func GetInternalCommands() []*cli.Command {
+func GetInternalCommands(defaultFlags []cli.Flag) []*cli.Command {
+	loadCommand.Flags = append(loadCommand.Flags, defaultFlags...)
 	return []*cli.Command{
 		&loadCommand,
 	}

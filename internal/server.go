@@ -44,13 +44,25 @@ type StdioServer interface {
 }
 
 // ProductionServerFactory implements ServerFactory for real server operations.
-type ProductionServerFactory struct{}
+type ProductionServerFactory struct {
+	// Optional auth config - if present and enabled, HTTP servers will use authentication
+	AuthConfig interface{} // Will be *auth.BearerAuthConfig when auth is imported
+}
 
-// CreateHTTPServer creates a production HTTP server wrapper.
+// CreateHTTPServer creates a production HTTP server wrapper with optional authentication.
 func (f *ProductionServerFactory) CreateHTTPServer(mcpServer *server.MCPServer) HTTPServer {
-	return &productionHTTPServer{
+	baseServer := &productionHTTPServer{
 		server: server.NewStreamableHTTPServer(mcpServer),
 	}
+	
+	// If auth config is present and enabled, wrap with authentication
+	// Note: Auth implementation will be added when auth package is integrated
+	if f.AuthConfig != nil {
+		log.Println("Auth config detected but auth integration not yet implemented")
+		// TODO: Return authenticated server wrapper when auth integration is complete
+	}
+	
+	return baseServer
 }
 
 // CreateStdioServer creates a production stdio server wrapper.
@@ -126,6 +138,14 @@ func StartServerWithFactory(app *core.MakeMCPApp, factory ServerFactory) error {
 // StartServer provides backward compatibility by using the production factory.
 func StartServer(app *core.MakeMCPApp) error {
 	return StartServerWithFactory(app, &ProductionServerFactory{})
+}
+
+// StartServerWithAuth starts a server with optional authentication configuration.
+func StartServerWithAuth(app *core.MakeMCPApp, authConfig interface{}) error {
+	factory := &ProductionServerFactory{
+		AuthConfig: authConfig,
+	}
+	return StartServerWithFactory(app, factory)
 }
 
 // GetMCPServer creates and configures an MCP server from the application configuration..

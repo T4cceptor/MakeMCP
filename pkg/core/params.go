@@ -40,6 +40,7 @@ type BaseAppParams struct {
 	DevMode    bool          `json:"devMode"`    // true if running in development mode
 	SourceType string        `json:"sourceType"` // type of source (openapi, cli, etc.)
 	File       string        `json:"file"`       // filename (without extension) for config file
+	BearerAuth interface{}   `json:"bearerAuth,omitempty"` // Bearer token authentication config
 }
 
 // NewBaseParams creates a new SharedParams with default values.
